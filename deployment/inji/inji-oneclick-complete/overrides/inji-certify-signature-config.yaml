@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: inji-certify-signature-config
+  namespace: inji-certify
+data:
+  key-alias-mapper: >-
+    {'RS256': {{'CERTIFY_VC_SIGN_RSA', ''}},
+    'EdDSA': {{'CERTIFY_VC_SIGN_ED25519', 'ED25519_SIGN'}},
+    'ES256K': {{'CERTIFY_VC_SIGN_EC_K1', 'EC_SECP256K1_SIGN'}},
+    'ES256': {{'CERTIFY_VC_SIGN_EC_R1', 'EC_SECP256R1_SIGN'}}}

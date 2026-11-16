@@ -1,0 +1,8 @@
+extraVolumes:
+  - name: mimoto-encryption-volume
+    persistentVolumeClaim:
+      claimName: mimoto-keygen-keymanager
+
+extraVolumeMounts:
+  - name: mimoto-encryption-volume
+    mountPath: /home/mosip/encryption

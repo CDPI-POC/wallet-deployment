@@ -1,0 +1,5 @@
+# release namespace chart values db_name db_user password_secret_key migrations_dir mode
+# TAB-separated, keep rows in dependency order. Replace examples with audited release manifests.
+# keycloak	keycloak	keycloak	keycloak.yaml	keycloak	keycloak_app	password	keycloak	existing
+# esignet	esignet	esignet	esignet.yaml	esignet	esignet_app	password	esignet	existing
+# inji-certify	inji-certify	inji-certify	inji-certify.yaml	certify	certify_app	password	certify	install

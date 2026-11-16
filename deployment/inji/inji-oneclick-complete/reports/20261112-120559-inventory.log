@@ -1,0 +1,7 @@
+[2026-11-12T12:05:59+05:30] Cluster, node, PostgreSQL secret references: OK
+[2026-11-12T12:05:59+05:30] Existing dependency namespace: config-server
+[2026-11-12T12:05:59+05:30] Existing dependency namespace: redis
+[2026-11-12T12:06:00+05:30] Existing dependency namespace: esignet
+[2026-11-12T12:06:00+05:30] No release was modified by preflight.
+./inji-deploy.sh: line 332: /home/mosipuser/inji-oneclick-complete/tools/inventory.sh: No such file or directory
+[2026-11-12T12:06:00+05:30] FAILED at line 332. Existing K8s releases and databases were not deleted.

@@ -1,0 +1,38 @@
+persistence:
+  enabled: true
+  existingClaim: mimoto-keygen-keymanager
+  mountDir: /home/mosip/encryption
+
+keysDir: /home/mosip/encryption
+
+keyStore:
+  fileName: encryptionkeystore.p12
+
+skipIfFileExists: true
+springConfigNameEnv: mimoto
+
+extraEnvVars:
+  - name: DB_DBUSER_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: inji-db-credentials
+        key: password
+  - name: KEYMANAGER_DATABASE_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: inji-db-credentials
+        key: password
+  - name: MIMOTO_OIDC_KEYSTORE_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: mimoto-oidc-keystore-password
+        key: mimoto-oidc-keystore-password      
+
+  - name: MOSIP_MIMOTO_DATABASE_HOSTNAME
+    value: postgres-postgresql.postgres.svc.cluster.local
+
+  - name: MOSIP_MIMOTO_DATABASE_PORT
+    value: "5432"
+
+  - name: SPRING_PROFILES_ACTIVE
+    value: "default"

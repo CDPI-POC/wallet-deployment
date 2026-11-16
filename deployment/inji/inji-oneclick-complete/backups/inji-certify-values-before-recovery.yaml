@@ -1,0 +1,46 @@
+extraEnvVars:
+- name: DB_DBUSER_PASSWORD
+  valueFrom:
+    secretKeyRef:
+      key: password
+      name: inji-db-credentials
+- name: MOSIP_KERNEL_KEYMANAGER_HSM_KEYSTORE_PASS
+  valueFrom:
+    secretKeyRef:
+      key: pin
+      name: inji-certify-hsm-credentials
+- name: SOFTHSM_CERTIFY_MOCK_SECURITY_PIN
+  valueFrom:
+    secretKeyRef:
+      key: pin
+      name: inji-certify-hsm-credentials
+- name: SOFTHSM_CERTIFY_SECURITY_PIN
+  valueFrom:
+    secretKeyRef:
+      key: pin
+      name: inji-certify-hsm-credentials
+- name: SPRING_APPLICATION_NAME
+  value: certify
+- name: SPRING_PROFILES_ACTIVE
+  value: mock-identity
+- name: SPRING_CLOUD_CONFIG_URI
+  value: http://inji-config-server.inji-certify.svc.cluster.local/config
+- name: SPRING_CLOUD_CONFIG_LABEL
+  value: Injitest_autodeploy
+- name: SPRING_CONFIG_IMPORT
+  value: configserver:http://inji-config-server.inji-certify.svc.cluster.local/config
+- name: MOSIP_CERTIFY_CACHE_REDIS_KEY_PREFIX
+  value: 'inji-certify-test::'
+- name: MOSIP_INJICERTIFY_MOCK_HOST
+  value: injicertify-inji.idencode.link
+- name: MOSIP_API_MOCKIDENTITYSYSTEM_HOST
+  value: mockidentity-inji.idencode.link
+- name: MOSIP_CERTIFY_SIGNATURE_ALGO_KEY_ALIAS_MAPPER
+  valueFrom:
+    configMapKeyRef:
+      key: key-alias-mapper
+      name: inji-certify-signature-config
+- name: MOSIP_CERTIFY_PLUGIN_MODE
+  value: DataProvider
+- name: DEBUG
+  value: "true"

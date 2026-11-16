@@ -1,0 +1,30 @@
+#!/usr/bin/env python3
+"""Idempotently insert a dedicated Config Server stage into an existing inji-deploy.sh.
+Fails closed if expected deploy() anchors are not found; creates timestamped backup.
+"""
+from pathlib import Path
+from datetime import datetime
+import shutil
+p=Path('inji-deploy.sh')
+assert p.is_file(), 'Run from the inji-oneclick-complete directory'
+s=p.read_text()
+anchor='   check_resources "$m"'
+if anchor not in s:
+    anchor='    check_resources "$m"'
+assert anchor in s, 'Cannot locate check_resources "$m" inside deploy loop; inspect manually'
+assert 'deploy(){' in s, 'Cannot find deploy() function'
+if 'INJI_DEDICATED_CONFIG_STAGE' in s:
+    print('Already patched'); raise SystemExit(0)
+backup=p.with_name(p.name+'.backup.'+datetime.now().strftime('%Y%m%d-%H%M%S'))
+shutil.copy2(p,backup)
+# Keep render side-effect-free: add stage only to deploy(), before checking Certify resources.
+addition='''    # INJI_DEDICATED_CONFIG_STAGE: managed by inji-config automation
+    if [[ "$m" == "inji-certify" ]]; then
+      APPLY=YES NS_CERTIFY="$NS_CERTIFY" \\
+        "$ROOT/scripts/deploy-inji-config-server.sh"
+      "$ROOT/scripts/check-inji-config.sh"
+    fi
+'''
+s=s.replace(anchor,addition+anchor,1)
+p.write_text(s)
+print('Patched:',p,'backup:',backup)

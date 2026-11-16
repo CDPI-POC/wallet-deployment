@@ -1,0 +1,16 @@
+[2026-11-13T05:15:17+05:30] Cluster, node, PostgreSQL secret references: OK
+[2026-11-13T05:15:17+05:30] Existing dependency namespace: config-server
+[2026-11-13T05:15:17+05:30] Existing dependency namespace: redis
+[2026-11-13T05:15:17+05:30] Existing dependency namespace: esignet
+[2026-11-13T05:15:17+05:30] No release was modified by preflight.
+Already present: /home/mosipuser/inji-oneclick-complete/sources/inji-certify-0.14.0
+Already present: /home/mosipuser/inji-oneclick-complete/sources/inji-verify-0.18.0
+Already present: /home/mosipuser/inji-oneclick-complete/sources/mimoto-0.21.0
+Already present: /home/mosipuser/inji-oneclick-complete/sources/inji-web-0.16.0
+Pinned Inji source repositories fetched successfully.
+[2026-11-13T05:15:22+05:30] Preserving existing inji_certify database; skipping initialization
+[2026-11-13T05:15:24+05:30] Initializing inji_mimoto from official pinned SQL, fresh-only
+[2026-11-13T05:15:25+05:30] Initialized inji_mimoto and recorded release marker
+[2026-11-13T05:15:28+05:30] Initializing inji_verify from official pinned SQL, fresh-only
+[2026-11-13T05:15:28+05:30] Initialized inji_verify and recorded release marker
+[2026-11-13T05:15:29+05:30] Created ConfigMap inji-verify/postgres-config

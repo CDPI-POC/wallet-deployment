@@ -1,0 +1,14 @@
+[2026-11-15T15:31:57+05:30] Cluster, node, PostgreSQL secret references: OK
+[2026-11-15T15:31:57+05:30] Existing dependency namespace: config-server
+[2026-11-15T15:31:57+05:30] Existing dependency namespace: redis
+[2026-11-15T15:31:57+05:30] Existing dependency namespace: esignet
+[2026-11-15T15:31:57+05:30] No release was modified by preflight.
+Already present: /home/mosipuser/inji-oneclick-complete/sources/inji-certify-0.14.0
+Already present: /home/mosipuser/inji-oneclick-complete/sources/inji-verify-0.18.0
+Already present: /home/mosipuser/inji-oneclick-complete/sources/mimoto-0.21.0
+Already present: /home/mosipuser/inji-oneclick-complete/sources/inji-web-0.16.0
+Pinned Inji source repositories fetched successfully.
+[2026-11-15T15:31:58+05:30] Selected deployment modules: mimoto
+[2026-11-15T15:32:13+05:30] Pinned chart verified: mimoto (0.21.0)
+[2026-11-15T15:32:14+05:30] Installing/upgrading mimoto/mimoto
+Release "mimoto" does not exist. Installing it now.

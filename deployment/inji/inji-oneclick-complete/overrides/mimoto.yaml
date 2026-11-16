@@ -1,0 +1,12 @@
+extraEnvVars:
+  - name: DB_DBUSER_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: inji-db-credentials
+        key: password
+
+  - name: MOSIP_MIMOTO_DATABASE_HOSTNAME
+    value: postgres-postgresql.postgres.svc.cluster.local
+
+  - name: MOSIP_MIMOTO_DATABASE_PORT
+    value: "5432"

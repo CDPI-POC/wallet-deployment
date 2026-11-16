@@ -1,0 +1,6 @@
+extraEnvVars:
+  - name: DB_DBUSER_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: inji-db-credentials
+        key: password

@@ -1,0 +1,77 @@
+Fetching inji/inji-certify at v0.14.0
+Cloning into '/home/mosipuser/inji-oneclick-complete/sources/inji-certify-0.14.0'...
+Note: switching to 'e54539a89616f64dc90e8f6797db9e66d826d97d'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by switching back to a branch.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -c with the switch command. Example:
+
+  git switch -c <new-branch-name>
+
+Or undo this operation with:
+
+  git switch -
+
+Turn off this advice by setting config variable advice.detachedHead to false
+
+Fetching inji/inji-verify at v0.18.0
+Cloning into '/home/mosipuser/inji-oneclick-complete/sources/inji-verify-0.18.0'...
+Note: switching to '0f001d4868506152b33f47fa4ad45aa879f49858'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by switching back to a branch.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -c with the switch command. Example:
+
+  git switch -c <new-branch-name>
+
+Or undo this operation with:
+
+  git switch -
+
+Turn off this advice by setting config variable advice.detachedHead to false
+
+Fetching inji/mimoto at v0.21.0
+Cloning into '/home/mosipuser/inji-oneclick-complete/sources/mimoto-0.21.0'...
+Note: switching to '48259310977b06c72401a41b666852362bf20bbc'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by switching back to a branch.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -c with the switch command. Example:
+
+  git switch -c <new-branch-name>
+
+Or undo this operation with:
+
+  git switch -
+
+Turn off this advice by setting config variable advice.detachedHead to false
+
+Fetching inji/inji-web at v0.16.0
+Cloning into '/home/mosipuser/inji-oneclick-complete/sources/inji-web-0.16.0'...
+Note: switching to 'f869aa7700c6b734eba2b4278cd4f50f3c3288fa'.
+
+You are in 'detached HEAD' state. You can look around, make experimental
+changes and commit them, and you can discard any commits you make in this
+state without impacting any branches by switching back to a branch.
+
+If you want to create a new branch to retain commits you create, you may
+do so (now or later) by using -c with the switch command. Example:
+
+  git switch -c <new-branch-name>
+
+Or undo this operation with:
+
+  git switch -
+
+Turn off this advice by setting config variable advice.detachedHead to false
+
+Pinned Inji source repositories fetched successfully.

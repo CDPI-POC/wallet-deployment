@@ -1,0 +1,30 @@
+[2026-11-16T15:42:09+05:30] Cluster, node, PostgreSQL secret references: OK
+[2026-11-16T15:42:09+05:30] Existing dependency namespace: config-server
+[2026-11-16T15:42:09+05:30] Existing dependency namespace: redis
+[2026-11-16T15:42:09+05:30] Existing dependency namespace: esignet
+[2026-11-16T15:42:09+05:30] No release was modified by preflight.
+Already present: /home/mosipuser/inji-oneclick-complete/sources/inji-certify-0.14.0
+Already present: /home/mosipuser/inji-oneclick-complete/sources/inji-verify-0.18.0
+Already present: /home/mosipuser/inji-oneclick-complete/sources/mimoto-0.21.0
+Already present: /home/mosipuser/inji-oneclick-complete/sources/inji-web-0.16.0
+Pinned Inji source repositories fetched successfully.
+[2026-11-16T15:42:09+05:30] Selected deployment modules: injiweb
+[2026-11-16T15:42:23+05:30] Pinned chart verified: injiweb (0.16.0)
+[2026-11-16T15:42:23+05:30] Installing/upgrading injiweb/injiweb
+Release "injiweb" does not exist. Installing it now.
+NAME: injiweb
+LAST DEPLOYED: Mon Nov 16 15:42:23 2026
+NAMESPACE: injiweb
+STATUS: deployed
+REVISION: 1
+TEST SUITE: None
+NOTES:
+
+NAME: injiweb
+LAST DEPLOYED: Mon Nov 16 15:42:23 2026
+NAMESPACE: injiweb
+STATUS: deployed
+REVISION: 1
+NAME      READY   UP-TO-DATE   AVAILABLE   AGE
+injiweb   1/1     1            1           7m26s
+[2026-11-16T15:49:50+05:30] Application health, OIDC issuance, HSM signing, DataShare and VP verification need end-to-end integration tests.

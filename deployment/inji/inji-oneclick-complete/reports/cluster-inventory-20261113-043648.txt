@@ -1,0 +1,119 @@
+===== Kubernetes Cluster =====
+default
+NAME        STATUS   ROLES                AGE     VERSION           INTERNAL-IP   EXTERNAL-IP   OS-IMAGE             KERNEL-VERSION       CONTAINER-RUNTIME
+inji-test   Ready    control-plane,etcd   3d16h   v1.34.12+rke2r1   10.3.1.29     <none>        Ubuntu 20.04.6 LTS   5.15.0-139-generic   containerd://2.2.7-k3s1
+
+===== Namespaces =====
+NAME                          STATUS   AGE
+activemq                      Active   2d12h
+artifactory                   Active   2d11h
+captcha                       Active   2d12h
+cattle-fleet-system           Active   3d12h
+cattle-impersonation-system   Active   3d12h
+cattle-system                 Active   3d16h
+conf-secrets                  Active   2d13h
+config-server                 Active   2d12h
+default                       Active   3d16h
+esignet                       Active   2d10h
+inji-certify                  Active   15h
+istio-system                  Active   3d5h
+kafka                         Active   2d7h
+keycloak                      Active   2d12h
+keymanager                    Active   2d11h
+kube-node-lease               Active   3d16h
+kube-public                   Active   3d16h
+kube-system                   Active   3d16h
+local-path-storage            Active   3d4h
+minio                         Active   2d13h
+mockid                        Active   2d7h
+monitoring                    Active   2d5h
+msg-gateways                  Active   2d13h
+postgres                      Active   2d13h
+redis                         Active   2d10h
+s3                            Active   2d13h
+softhsm                       Active   2d13h
+
+===== Helm Releases =====
+NAME                            	NAMESPACE          	REVISION	UPDATED                                	STATUS  	CHART                                                                                     	APP VERSION
+activemq                        	activemq           	1       	2026-11-10 16:13:58.37173645 +0530 IST 	deployed	activemq-artemis-0.0.4                                                                    	2.39.0     
+artifactory                     	artifactory        	1       	2026-11-10 17:10:50.014544963 +0530 IST	deployed	artifactory-12.0.1                                                                        	           
+conf-secrets                    	conf-secrets       	1       	2026-11-10 15:25:22.128427699 +0530 IST	deployed	conf-secrets-12.0.1                                                                       	1.1.2      
+config-server                   	config-server      	2       	2026-11-10 17:09:39.270247786 +0530 IST	deployed	config-server-12.0.1                                                                      	1.1.2      
+esignet                         	esignet            	1       	2026-11-10 19:01:18.797987683 +0530 IST	deployed	esignet-1.4.0                                                                             	           
+esignet-keycloak-init           	esignet            	1       	2026-11-10 18:56:16.175774238 +0530 IST	deployed	keycloak-init-12.0.1                                                                      	1.2.0      
+fleet-agent-c-9khhg             	cattle-fleet-system	1       	2026-11-09 10:46:06.559203606 +0000 UTC	deployed	fleet-agent-c-9khhg-v0.0.0+s-17d4583633c21cbc2714c357a8f2353c928a00d548432c483c18646b1327e	           
+istio-addons                    	minio              	1       	2026-11-10 14:57:56.237420457 +0530 IST	deployed	istio-addons-1.2.0                                                                        	1.2.0      
+istio-addons                    	postgres           	1       	2026-11-10 14:56:55.200254419 +0530 IST	deployed	istio-addons-0.1.0                                                                        	1.16.0     
+istio-addons                    	keycloak           	1       	2026-11-10 15:52:46.317264655 +0530 IST	deployed	istio-addons-0.1.0                                                                        	1.16.0     
+istio-base                      	istio-system       	1       	2026-11-09 23:18:59.200561834 +0530 IST	deployed	base-1.30.8                                                                               	1.30.8     
+istio-ingressgateway            	istio-system       	1       	2026-11-09 23:26:53.683699157 +0530 IST	deployed	gateway-1.30.8                                                                            	1.30.8     
+istiod                          	istio-system       	1       	2026-11-09 23:19:23.990391564 +0530 IST	deployed	istiod-1.30.8                                                                             	1.30.8     
+kafka                           	kafka              	1       	2026-11-10 20:37:13.314254539 +0530 IST	failed  	kafka-18.3.1                                                                              	3.2.1      
+kernel-keygen                   	keymanager         	1       	2026-11-10 17:21:50.727719564 +0530 IST	deployed	keygen-12.0.1                                                                             	           
+keycloak                        	keycloak           	1       	2026-11-10 15:48:57.431773436 +0530 IST	deployed	keycloak-7.1.18                                                                           	16.1.1     
+keycloak-init                   	keycloak           	1       	2026-11-10 15:55:11.034210875 +0530 IST	deployed	keycloak-init-12.0.1                                                                      	1.2.0      
+keymanager                      	keymanager         	1       	2026-11-10 17:27:53.87353441 +0530 IST 	deployed	keymanager-12.0.1                                                                         	           
+minio                           	minio              	1       	2026-11-10 14:57:55.562438724 +0530 IST	deployed	minio-10.1.6                                                                              	2022.2.7   
+mock-identity-system            	mockid             	1       	2026-11-10 21:12:38.532874594 +0530 IST	deployed	mock-identity-system-0.12.0                                                               	           
+oidc-ui                         	esignet            	1       	2026-11-10 21:07:03.26470055 +0530 IST 	deployed	oidc-ui-1.0.1                                                                             	           
+postgres                        	postgres           	1       	2026-11-10 14:52:12.565804773 +0530 IST	deployed	postgresql-12.11.1                                                                        	15.4.0     
+postgres-init                   	postgres           	1       	2026-11-10 14:57:13.73202532 +0530 IST 	deployed	postgres-init-12.0.1                                                                      	1.2.0      
+postgres-init-esignet           	esignet            	1       	2026-11-10 18:55:35.191231724 +0530 IST	deployed	postgres-init-12.0.1                                                                      	1.2.0      
+postgres-init-mockidentitysystem	mockid             	1       	2026-11-10 21:12:25.600324948 +0530 IST	deployed	postgres-init-12.0.1                                                                      	1.2.0      
+prometheus-operator-crds        	monitoring         	1       	2026-11-10 23:27:05.496814599 +0530 IST	deployed	prometheus-operator-crds-33.0.1                                                           	v0.95.1    
+rancher-webhook                 	cattle-system      	2       	2026-11-09 10:46:50.372961102 +0000 UTC	deployed	rancher-webhook-110.0.4+up0.11.4                                                          	0.11.4     
+redis                           	redis              	1       	2026-11-10 18:19:01.67764525 +0530 IST 	deployed	redis-17.3.14                                                                             	7.0.5      
+rke2-canal                      	kube-system        	1       	2026-11-09 06:38:31.519889912 +0000 UTC	deployed	rke2-canal-v3.32.2-build2026090900                                                        	v3.32.2    
+rke2-coredns                    	kube-system        	1       	2026-11-09 06:38:31.494181491 +0000 UTC	deployed	rke2-coredns-1.47.102                                                                     	1.14.6     
+rke2-ingress-nginx              	kube-system        	1       	2026-11-09 06:39:04.231335879 +0000 UTC	deployed	rke2-ingress-nginx-4.15.110                                                               	1.15.1     
+rke2-metrics-server             	kube-system        	1       	2026-11-09 06:39:04.282515727 +0000 UTC	deployed	rke2-metrics-server-3.14.001                                                              	0.9.0      
+rke2-runtimeclasses             	kube-system        	1       	2026-11-09 06:39:06.241153764 +0000 UTC	deployed	rke2-runtimeclasses-0.1.000                                                               	0.1.0      
+rke2-snapshot-controller        	kube-system        	1       	2026-11-09 06:39:08.293344269 +0000 UTC	deployed	rke2-snapshot-controller-5.2.004                                                          	v8.6.0     
+rke2-snapshot-controller-crd    	kube-system        	1       	2026-11-09 06:39:07.123069809 +0000 UTC	deployed	rke2-snapshot-controller-crd-5.2.004                                                      	v8.6.0     
+softhsm-certify                 	softhsm            	1       	2026-11-10 23:18:06.549750608 +0530 IST	deployed	softhsm-1.3.0                                                                             	           
+softhsm-esignet                 	softhsm            	1       	2026-11-10 18:55:44.197766724 +0530 IST	deployed	softhsm-12.0.1                                                                            	           
+softhsm-ida                     	softhsm            	1       	2026-11-10 15:11:13.988047046 +0530 IST	deployed	softhsm-12.0.1                                                                            	           
+softhsm-kernel                  	softhsm            	1       	2026-11-10 15:10:35.023234555 +0530 IST	deployed	softhsm-12.0.1                                                                            	           
+softhsm-mock-identity-system    	softhsm            	1       	2026-11-10 21:11:47.070051054 +0530 IST	deployed	softhsm-12.0.1                                                                            	           
+system-upgrade-controller       	cattle-system      	2       	2026-11-09 10:47:02.468275678 +0000 UTC	deployed	system-upgrade-controller-110.0.0                                                         	v0.20.1    
+
+===== Inji and Infrastructure Pods =====
+esignet               db-esignet-init-job-c56g9                               0/1     Completed          0               2d9h
+esignet               esignet-7bfdcffbfc-864sq                                2/2     Running            0               37h
+esignet               esignet-debug                                           0/2     Completed          0               37h
+esignet               esignet-keycloak-init-pj6pp                             0/1     Completed          0               2d9h
+esignet               oidc-ui-76d9664bb8-rqpjt                                2/2     Running            2 (2d4h ago)    2d7h
+inji-certify          inji-config-server-769885d54c-5hpvz                     1/1     Running            0               11h
+keycloak              keycloak-postgresql-0                                   1/1     Running            3 (2d4h ago)    2d12h
+kube-system           cloud-controller-manager-inji-test                      1/1     Running            6 (2d4h ago)    3d16h
+kube-system           etcd-inji-test                                          1/1     Running            5               3d16h
+kube-system           kube-apiserver-inji-test                                1/1     Running            4               3d16h
+kube-system           kube-controller-manager-inji-test                       1/1     Running            6 (2d4h ago)    3d16h
+kube-system           kube-proxy-inji-test                                    1/1     Running            0               2d4h
+kube-system           kube-scheduler-inji-test                                1/1     Running            3 (2d4h ago)    3d16h
+postgres              db-audit-init-job-jc4g7                                 0/1     Completed          0               2d13h
+postgres              db-credential-init-job-s9q7d                            0/1     Completed          0               2d13h
+postgres              db-hotlist-init-job-76gk5                               0/1     Completed          0               2d13h
+postgres              db-ida-init-job-kjblg                                   0/1     Completed          0               2d13h
+postgres              db-idmap-init-job-vpvxk                                 0/1     Completed          0               2d13h
+postgres              db-idrepo-init-job-fhqbv                                0/1     Completed          0               2d13h
+postgres              db-kernel-init-job-6qphq                                0/1     Completed          0               2d13h
+postgres              db-keymgr-init-job-lsmcj                                0/1     Completed          0               2d13h
+postgres              db-master-init-job-pnjnv                                0/1     Completed          0               2d13h
+postgres              db-pms-init-job-pzj2r                                   0/1     Completed          0               2d13h
+postgres              db-prereg-init-job-xsj7n                                0/1     Completed          0               2d13h
+postgres              db-regprc-init-job-8hfrc                                0/1     Completed          0               2d13h
+postgres              db-resident-init-job-9grz2                              0/1     Completed          0               2d13h
+postgres              postgres-postgresql-0                                   2/2     Running            3 (2d4h ago)    2d13h
+redis                 redis-master-0                                          2/2     Running            3 (2d4h ago)    2d10h
+softhsm               softhsm-certify-78bc6f8c58-bjwwb                        2/2     Running            1 (2d4h ago)    2d5h
+softhsm               softhsm-esignet-54b6859b68-w42lr                        2/2     Running            3 (2d4h ago)    2d9h
+
+===== PostgreSQL Services =====
+NAME                     TYPE        CLUSTER-IP    EXTERNAL-IP   PORT(S)    AGE
+postgres-postgresql      ClusterIP   10.73.89.63   <none>        5432/TCP   2d13h
+postgres-postgresql-hl   ClusterIP   None          <none>        5432/TCP   2d13h
+
+===== Existing Inji Secrets (Names Only) =====
+NAME                  TYPE
+inji-db-credentials   Opaque

@@ -1,0 +1,4 @@
+Usage: ./deploy.sh [--inventory|--preflight|--fetch|--database-plan|--database-apply|--render|--deploy|--status|--all]
+Use config/inji.env. For database writes set ALLOW_DB_INIT=YES after a verified backup.
+For Helm writes set ALLOW_HELM_UPGRADE=YES; for upgrading existing releases additionally set ALLOW_EXISTING_UPGRADE=YES.
+DataShare requires DATA_SHARE_CHART pointing to the verified 1.3.0-beta.2 chart.

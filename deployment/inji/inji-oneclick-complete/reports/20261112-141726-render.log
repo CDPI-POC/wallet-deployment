@@ -1,0 +1,4 @@
+error: current-context is not set
+error: current-context is not set
+[2026-11-12T14:17:26+05:30] FAILED at line 54. Existing K8s releases and databases were not deleted.
+[2026-11-12T14:17:26+05:30] ERROR: Wrong context:  (expected default)

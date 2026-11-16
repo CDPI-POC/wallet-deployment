@@ -1,0 +1,37 @@
+[2026-11-13T21:28:53+05:30] Cluster, node, PostgreSQL secret references: OK
+[2026-11-13T21:28:54+05:30] Existing dependency namespace: config-server
+[2026-11-13T21:28:54+05:30] Existing dependency namespace: redis
+[2026-11-13T21:28:54+05:30] Existing dependency namespace: esignet
+[2026-11-13T21:28:54+05:30] No release was modified by preflight.
+Already present: /home/mosipuser/inji-oneclick-complete/sources/inji-certify-0.14.0
+Already present: /home/mosipuser/inji-oneclick-complete/sources/inji-verify-0.18.0
+Already present: /home/mosipuser/inji-oneclick-complete/sources/mimoto-0.21.0
+Already present: /home/mosipuser/inji-oneclick-complete/sources/inji-web-0.16.0
+Pinned Inji source repositories fetched successfully.
+[2026-11-13T21:28:54+05:30] Selected deployment modules: inji-certify
+[2026-11-13T21:29:07+05:30] Pinned chart verified: inji-certify (0.14.0)
+[2026-11-13T21:29:07+05:30] Using existing Config Server in config-server namespace
+deployment "config-server" successfully rolled out
+[2026-11-13T21:29:08+05:30] Existing Config Server endpoints: 10.72.0.79 
+[2026-11-13T21:29:08+05:30] Preserving existing ConfigMap inji-certify/inji-stack-config
+[2026-11-13T21:29:08+05:30] Preserving existing ConfigMap inji-certify/config-server-share
+[2026-11-13T21:29:08+05:30] Preserving existing ConfigMap inji-certify/softhsm-certify-share
+[2026-11-13T21:29:09+05:30] Certify chart version unchanged (inji-certify-0.14.0); configuration upgrade
+[2026-11-13T21:29:09+05:30] Installing/upgrading inji-certify/inji-certify
+[2026-11-13T21:29:09+05:30] Deploying Inji Certify with rollout verification
+Release "inji-certify" has been upgraded. Happy Helming!
+NAME: inji-certify
+LAST DEPLOYED: Fri Nov 13 21:29:09 2026
+NAMESPACE: inji-certify
+STATUS: deployed
+REVISION: 16
+TEST SUITE: None
+deployment "inji-certify" successfully rolled out
+NAME: inji-certify
+LAST DEPLOYED: Fri Nov 13 21:29:09 2026
+NAMESPACE: inji-certify
+STATUS: deployed
+REVISION: 16
+NAME           READY   UP-TO-DATE   AVAILABLE   AGE
+inji-certify   1/1     1            1           14h
+[2026-11-13T21:29:10+05:30] Application health, OIDC issuance, HSM signing, DataShare and VP verification need end-to-end integration tests.

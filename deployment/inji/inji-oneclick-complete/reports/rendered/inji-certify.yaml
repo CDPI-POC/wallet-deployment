@@ -1,0 +1,328 @@
+---
+# Source: inji-certify/templates/service-account.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/name: inji-certify
+    helm.sh/chart: inji-certify-0.14.0
+    app.kubernetes.io/instance: inji-certify
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: inji
+  name: inji-certify
+  namespace: inji-certify
+---
+# Source: inji-certify/templates/clusterrolebinding.yaml
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  labels:
+    app.kubernetes.io/name: inji-certify
+    helm.sh/chart: inji-certify-0.14.0
+    app.kubernetes.io/instance: inji-certify
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: inji
+  name: inji-certify
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: inji-certify
+subjects:
+  - kind: ServiceAccount
+    name: inji-certify
+    namespace: inji-certify
+---
+# Source: inji-certify/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/name: inji-certify
+    helm.sh/chart: inji-certify-0.14.0
+    app.kubernetes.io/instance: inji-certify
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: inji
+  name: inji-certify
+  annotations:
+spec:
+  type: ClusterIP
+  
+  ports:
+    - port: 80
+      protocol: TCP 
+      targetPort: 8090
+  selector:
+    app.kubernetes.io/name: inji-certify
+    app.kubernetes.io/instance: inji-certify
+---
+# Source: inji-certify/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/name: inji-certify
+    helm.sh/chart: inji-certify-0.14.0
+    app.kubernetes.io/instance: inji-certify
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: inji
+  name: inji-certify
+  annotations:
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: inji-certify
+      app.kubernetes.io/instance: inji-certify
+  template:
+    metadata:
+      annotations:
+        
+        prometheus.io/scrape: "true"
+
+      labels:
+        app.kubernetes.io/name: inji-certify
+        helm.sh/chart: inji-certify-0.14.0
+        app.kubernetes.io/instance: inji-certify
+        app.kubernetes.io/managed-by: Helm
+    spec:
+      serviceAccountName: inji-certify
+      
+      affinity:
+        podAffinity:
+          
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: inji-certify
+                    app.kubernetes.io/instance: inji-certify
+                namespaces:
+                  - "inji-certify"
+                topologyKey: kubernetes.io/hostname
+              weight: 1
+        nodeAffinity:
+          
+      initContainers:
+      containers:
+        - name: inji-certify
+          image: docker.io/injistack/inji-certify-with-plugins:0.14.0
+          imagePullPolicy: Always
+          env:
+            - name: container_user
+              value: 1001 | quote
+            - name: JDK_JAVA_OPTIONS
+              value: -Xms1500M -Xmx1500M
+            - name: DB_DBUSER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: inji-db-credentials
+            - name: MOSIP_KERNEL_KEYMANAGER_HSM_KEYSTORE_PASS
+              valueFrom:
+                secretKeyRef:
+                  key: pin
+                  name: inji-certify-hsm-credentials
+            - name: SOFTHSM_CERTIFY_MOCK_SECURITY_PIN
+              valueFrom:
+                secretKeyRef:
+                  key: pin
+                  name: inji-certify-hsm-credentials
+            - name: SOFTHSM_CERTIFY_SECURITY_PIN
+              valueFrom:
+                secretKeyRef:
+                  key: pin
+                  name: inji-certify-hsm-credentials
+            - name: SPRING_APPLICATION_NAME
+              value: certify
+            - name: SPRING_PROFILES_ACTIVE
+              value: mock-identity
+            - name: SPRING_CLOUD_CONFIG_URI
+              value: http://config-server.config-server.svc.cluster.local/config
+            - name: SPRING_CLOUD_CONFIG_LABEL
+              value: Injitest_autodeploy
+            - name: SPRING_CONFIG_IMPORT
+              value: configserver:http://config-server.config-server.svc.cluster.local/config
+            - name: MOSIP_CERTIFY_CACHE_REDIS_KEY_PREFIX
+              value: 'inji-certify-test::'
+            - name: MOSIP_INJICERTIFY_MOCK_HOST
+              value: injicertify-inji.idencode.link
+            - name: MOSIP_API_MOCKIDENTITYSYSTEM_HOST
+              value: mockidentity-inji.idencode.link
+            - name: MOSIP_CERTIFY_SIGNATURE_ALGO_KEY_ALIAS_MAPPER
+              valueFrom:
+                configMapKeyRef:
+                  key: key-alias-mapper
+                  name: inji-certify-signature-config
+            - name: MOSIP_CERTIFY_PLUGIN_MODE
+              value: DataProvider
+            - name: DEBUG
+              value: "true"
+            - name: MOSIP_CERTIFY_AUTHN_JWK_SET_URI
+              value: http://esignet.esignet.svc.cluster.local/v1/esignet/oauth/.well-known/jwks.json
+            - name: install_hsm_client
+              value: "true"
+          envFrom:
+              - configMapRef:
+                  name: inji-stack-config
+              - configMapRef:
+                  name: config-server-share
+              - configMapRef:
+                  name: softhsm-certify-share
+          ports:
+            - name: spring-service
+              containerPort: 8090
+          resources:
+            limits:
+              cpu: 500m
+              memory: 2250Mi
+            requests:
+              cpu: 100m
+              memory: 1500Mi
+          startupProbe:
+            failureThreshold: 30
+            httpGet:
+              path: /v1/certify/actuator/health
+              port: 8090
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          livenessProbe:
+            failureThreshold: 6
+            httpGet:
+              path: /v1/certify/actuator/health
+              port: 8090
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          readinessProbe:
+            failureThreshold: 6
+            httpGet:
+              path: /v1/certify/actuator/health
+              port: 8090
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+      volumes:
+---
+# Source: inji-certify/templates/gateway.yaml
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name:  inji-certify-gateway
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+      - injicertify.sandbox.xyz.net
+---
+# Source: inji-certify/templates/servicemonitor.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: inji-certify
+  namespace: "inji-certify"
+  labels:
+    app.kubernetes.io/name: inji-certify
+    helm.sh/chart: inji-certify-0.14.0
+    app.kubernetes.io/instance: inji-certify
+    app.kubernetes.io/managed-by: Helm
+spec:
+  endpoints:
+    - targetPort: 8090
+      path: /v1/inji-certify/actuator/prometheus
+      interval: 10s
+  namespaceSelector:
+    matchNames:
+      - "inji-certify"
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: inji-certify
+      app.kubernetes.io/instance: inji-certify
+---
+# Source: inji-certify/templates/virtualservice.yaml
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: inji-certify
+  namespace: inji-certify
+  labels:
+    app.kubernetes.io/name: inji-certify
+    helm.sh/chart: inji-certify-0.14.0
+    app.kubernetes.io/instance: inji-certify
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: inji
+spec:
+  hosts:
+    - "*"
+  gateways:
+    - inji-certify-gateway
+  http:
+    - headers:
+        request:
+          set:
+            x-forwarded-proto: https
+        response:
+          set:
+            Cache-control: no-store
+            Pragma: no-cache
+            Strict-Transport-Security: max-age=31536000; includeSubDomains
+            X-Frame-Options: SAMEORIGIN
+      match:
+        - uri:
+            exact: /.well-known/openid-credential-issuer
+      rewrite:
+        uri: /v1/certify/issuance/.well-known/openid-credential-issuer
+      route:
+        - destination:
+            host: inji-certify
+            port:
+              number: 80
+    - headers:
+        request:
+          set:
+            x-forwarded-proto: https
+        response:
+          set:
+            Cache-control: no-store
+            Pragma: no-cache
+            Strict-Transport-Security: max-age=31536000; includeSubDomains
+            X-Frame-Options: SAMEORIGIN
+      match:
+        - uri:
+            exact: /.well-known/did.json
+      rewrite:
+        uri: /v1/certify/issuance/.well-known/did.json
+      route:
+        - destination:
+            host: inji-certify
+            port:
+              number: 80
+    - headers:
+        request:
+          set:
+            x-forwarded-proto: https
+        response:
+          set:
+            Cache-control: no-store
+            Pragma: no-cache
+            Strict-Transport-Security: max-age=31536000; includeSubDomains
+            X-Frame-Options: SAMEORIGIN
+      match:
+        - uri:
+            prefix: /
+      route:
+        - destination:
+            host: inji-certify
+            port:
+              number: 80

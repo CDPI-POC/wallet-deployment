@@ -1,0 +1,459 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+umask 077
+ROOT=$(cd "$(dirname "$0")" && pwd)
+ENV_FILE=${INJI_ENV_FILE:-$ROOT/config/inji.env}
+[[ -f "$ENV_FILE" ]] || { echo "Create $ENV_FILE from config/inji.env.example" >&2; exit 1; }
+# shellcheck disable=SC1090
+# Preserve explicit operator-supplied safety settings.
+_inji_helm_override="${ALLOW_HELM_UPGRADE-}"
+_inji_existing_override="${ALLOW_EXISTING_UPGRADE-}"
+_inji_db_override="${ALLOW_DB_INIT-}"
+
+source "$ENV_FILE"
+
+[[ -z "$_inji_helm_override" ]] || ALLOW_HELM_UPGRADE="$_inji_helm_override"
+[[ -z "$_inji_existing_override" ]] || ALLOW_EXISTING_UPGRADE="$_inji_existing_override"
+[[ -z "$_inji_db_override" ]] || ALLOW_DB_INIT="$_inji_db_override"
+
+unset _inji_helm_override _inji_existing_override _inji_db_override
+: "${EXPECTED_CONTEXT:?Set EXPECTED_CONTEXT}" "${EXPECTED_NODE:?Set EXPECTED_NODE}"
+: "${PG_NAMESPACE:?}" "${PG_HOST:?}" "${PG_ADMIN_SECRET:?}" "${PG_ADMIN_SECRET_KEY:?}"
+: "${APP_PASSWORD_SECRET:?}" "${APP_PASSWORD_KEY:?}"
+PG_PORT=${PG_PORT:-5432}; PG_ADMIN_USER=${PG_ADMIN_USER:-postgres}
+PG_SSLMODE=${PG_SSLMODE:-prefer}; PG_CLIENT_IMAGE=${PG_CLIENT_IMAGE:-postgres:16}
+CONFIG_SERVER_NAMESPACE=${CONFIG_SERVER_NAMESPACE:-config-server}
+REDIS_NAMESPACE=${REDIS_NAMESPACE:-redis}
+ESIGNET_NAMESPACE=${ESIGNET_NAMESPACE:-esignet}
+TIMEOUT=${TIMEOUT:-12m}
+CERTIFY_USECASE=${CERTIFY_USECASE:-mock-identity}
+case "$CERTIFY_USECASE" in
+ mock-identity) CERTIFY_DATABASE=inji_certify_mock;;
+ mosipid-identity) CERTIFY_DATABASE=inji_certify_mosipid;;
+ sunbird-insurance) CERTIFY_DATABASE=inji_certify_insurance;;
+ postgres-landregistry) CERTIFY_DATABASE=inji_certify_landregistry;;
+ core-default) CERTIFY_DATABASE=inji_certify;;
+ *) echo "Invalid CERTIFY_USECASE: $CERTIFY_USECASE" >&2; exit 1;;
+esac
+NS_CERTIFY=${NS_CERTIFY:-inji-certify}
+NS_VERIFY=${NS_VERIFY:-inji-verify}
+NS_MIMOTO=${NS_MIMOTO:-mimoto}
+NS_WEB=${NS_WEB:-injiweb}
+MODE=${1:---help}
+mkdir -p "$ROOT/reports"
+LOG="$ROOT/reports/$(date +%Y%m%d-%H%M%S)-${MODE#--}.log"
+exec > >(tee -a "$LOG") 2>&1
+log(){ printf '[%s] %s\n' "$(date -Is)" "$*"; }
+die(){ log "ERROR: $*" >&2; exit 1; }
+trap 'log "FAILED at line $LINENO. Existing K8s releases and databases were not deleted." >&2' ERR
+trap 'cleanup_pg' EXIT
+need(){ command -v "$1" >/dev/null || die "Missing prerequisite: $1"; }
+valid_dns(){ [[ "$1" =~ ^[a-z0-9][a-z0-9.-]*$ ]]; }
+preflight(){
+ for c in kubectl helm git python3 base64 openssl; do need "$c"; done
+ [[ "$(kubectl config current-context)" == "$EXPECTED_CONTEXT" ]] || die "Wrong context: $(kubectl config current-context) (expected $EXPECTED_CONTEXT)"
+ kubectl get node "$EXPECTED_NODE" >/dev/null || die "Node not found: $EXPECTED_NODE"
+ [[ "$(kubectl get node "$EXPECTED_NODE" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}')" == True ]] || die "Node not Ready"
+ for v in "$PG_NAMESPACE" "$PG_HOST" "$PG_ADMIN_SECRET" "$CONFIG_SERVER_NAMESPACE" "$REDIS_NAMESPACE" "$ESIGNET_NAMESPACE"; do valid_dns "$v" || die "Invalid DNS identifier: $v"; done
+ [[ "$PG_PORT" =~ ^[0-9]+$ ]] || die "PG_PORT must be numeric"
+ kubectl get ns "$PG_NAMESPACE" >/dev/null || die "PostgreSQL namespace not found"
+ kubectl get secret -n "$PG_NAMESPACE" "$PG_ADMIN_SECRET" >/dev/null || die "PostgreSQL admin secret missing"
+ [[ -n "$(kubectl get secret -n "$PG_NAMESPACE" "$PG_ADMIN_SECRET" -o "jsonpath={.data.$PG_ADMIN_SECRET_KEY}")" ]] || die "Missing PostgreSQL admin password key"
+ log "Cluster, node, PostgreSQL secret references: OK"
+ for ns in "$CONFIG_SERVER_NAMESPACE" "$REDIS_NAMESPACE" "$ESIGNET_NAMESPACE"; do
+   if kubectl get ns "$ns" >/dev/null 2>&1; then log "Existing dependency namespace: $ns"; else log "WARNING: dependency namespace absent: $ns"; fi
+ done
+ log 'No release was modified by preflight.'
+}
+fetch_sources(){
+ need git
+ "$ROOT/tools/fetch-sources.sh"
+}
+chart_for(){
+ case "$1" in
+ inji-certify) echo "$ROOT/sources/inji-certify-0.14.0/helm/inji-certify";;
+ inji-verify-service) echo "$ROOT/sources/inji-verify-0.18.0/helm/inji-verify-service";;
+ inji-verify-ui) echo "$ROOT/sources/inji-verify-0.18.0/helm/inji-verify-ui";;
+ mimoto) echo "$ROOT/sources/mimoto-0.21.0/helm/mimoto";;
+ injiweb) echo "$ROOT/sources/inji-web-0.16.0/helm/inji-web";;
+ datashare) echo "${DATA_SHARE_CHART:-}";;
+ *) die "Unknown chart $1";;
+ esac
+}
+expected_version(){ case "$1" in inji-certify) echo 0.14.0;; inji-verify-service|inji-verify-ui) echo 0.18.0;; mimoto) echo 0.21.0;; injiweb) echo 0.16.0;; datashare) echo 1.3.0-beta.2;; esac; }
+module_ns(){ case "$1" in inji-certify) echo "$NS_CERTIFY";; inji-verify-service|inji-verify-ui) echo "$NS_VERIFY";; mimoto) echo "$NS_MIMOTO";; injiweb|datashare) echo "$NS_WEB";; esac; }
+# Separate settings per module, not a wildcard upgrade.
+modules=(inji-certify inji-verify-service inji-verify-ui mimoto datashare injiweb)
+
+# Optional module selection for staged deployments.
+# Example: DEPLOY_MODULES=inji-certify,mimoto
+select_deploy_modules(){
+  [[ -n "${DEPLOY_MODULES:-}" ]] || return 0
+
+  local requested item found valid
+  local -a selected=()
+
+  IFS=',' read -r -a requested <<< "$DEPLOY_MODULES"
+
+  [[ "${#requested[@]}" -gt 0 ]] || die "Empty DEPLOY_MODULES"
+
+  for item in "${requested[@]}"; do
+    found=NO
+    for valid in "${modules[@]}"; do
+      if [[ "$item" == "$valid" ]]; then
+        found=YES
+        break
+      fi
+    done
+
+    [[ "$found" == YES ]] || die "Unknown deployment module: $item"
+
+    for valid in "${selected[@]}"; do
+      [[ "$valid" != "$item" ]] || die "Duplicate deployment module: $item"
+    done
+
+    selected+=("$item")
+  done
+
+  modules=("${selected[@]}")
+  log "Selected deployment modules: ${modules[*]}"
+}
+
+prepare_charts(){
+ for m in "${modules[@]}"; do
+  local_chart=$(chart_for "$m")
+  [[ -n "$local_chart" ]] || die "DATA_SHARE_CHART must point to the VERIFIED DataShare chart"
+  [[ -f "$local_chart/Chart.yaml" || -f "$local_chart" ]] || die "Chart not found: $local_chart (run --fetch)"
+  meta=$(helm show chart "$local_chart")
+  expected=$(expected_version "$m")
+  chart_version=$(printf '%s\n' "$meta" | awk '/^version:/ {print $2; exit}' | tr -d '"')
+  chart_name=$(printf '%s\n' "$meta" | awk '/^name:/ {print $2; exit}' | tr -d '"')
+  [[ "$chart_version" == "$expected" ]] || die "$m version mismatch: got $chart_version, want $expected"
+  [[ "$chart_name" == "$m" ]] || die "$m chart name mismatch: $chart_name"
+  if [[ -d "$local_chart" ]]; then
+    helm dependency build "$local_chart" >/dev/null
+  fi
+  log "Pinned chart verified: $m ($chart_version)"
+ done
+}
+# Application DB passwords may be auto-created only in an application-specific namespace.
+# A supplied existing Kubernetes Secret is never overwritten.
+app_password(){
+ local ns=$1; local secret_key
+ secret_key=$(kubectl get secret "$APP_PASSWORD_SECRET" -n "$ns" -o "jsonpath={.data.$APP_PASSWORD_KEY}" 2>/dev/null || true)
+ [[ -n "$secret_key" ]] || die "Missing $ns/$APP_PASSWORD_SECRET ($APP_PASSWORD_KEY). Use --database-apply with AUTO_CREATE_APP_SECRET=YES to create."
+ printf '%s' "$secret_key" | base64 -d
+}
+ensure_secret(){
+ local ns=$1
+ kubectl create namespace "$ns" --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+ if ! kubectl get secret -n "$ns" "$APP_PASSWORD_SECRET" >/dev/null 2>&1; then
+  [[ "${AUTO_CREATE_APP_SECRET:-NO}" == YES ]] || die "Create $ns/$APP_PASSWORD_SECRET, or set AUTO_CREATE_APP_SECRET=YES"
+  local password
+  password=$(openssl rand -hex 32)
+  kubectl -n "$ns" create secret generic "$APP_PASSWORD_SECRET" --from-literal="$APP_PASSWORD_KEY=$password" >/dev/null
+  unset password
+  log "Created dedicated application DB secret in namespace $ns (value not printed)"
+ fi
+ app_password "$ns" >/dev/null
+}
+PG_POD=
+cleanup_pg(){ if [[ -n "$PG_POD" ]]; then kubectl -n "$PG_NAMESPACE" delete pod "$PG_POD" --ignore-not-found --wait=false >/dev/null 2>&1 || true; PG_POD=; fi; }
+start_pg(){
+ [[ -z "$PG_POD" ]] || return
+ PG_POD="inji-deploy-psql-$(openssl rand -hex 4)"
+ cat <<YAML | kubectl apply -f - >/dev/null
+apiVersion: v1
+kind: Pod
+metadata:
+  name: $PG_POD
+  namespace: $PG_NAMESPACE
+  labels:
+    app: inji-deploy-psql
+spec:
+  restartPolicy: Never
+  containers:
+    - name: psql
+      image: $PG_CLIENT_IMAGE
+      command: ["sleep", "3600"]
+      env:
+        - name: PGHOST
+          value: "$PG_HOST"
+        - name: PGPORT
+          value: "$PG_PORT"
+        - name: PGUSER
+          value: "$PG_ADMIN_USER"
+        - name: PGSSLMODE
+          value: "$PG_SSLMODE"
+        - name: PGPASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: "$PG_ADMIN_SECRET"
+              key: "$PG_ADMIN_SECRET_KEY"
+YAML
+ kubectl wait --for=jsonpath='{.status.phase}'=Running "pod/$PG_POD" -n "$PG_NAMESPACE" --timeout=240s >/dev/null || die 'Cannot start temporary PostgreSQL client pod'
+}
+psql_admin(){ local database=$1; shift; kubectl exec -i -n "$PG_NAMESPACE" "$PG_POD" -c psql -- psql -X -v ON_ERROR_STOP=1 -q -d "$database" "$@"; }
+create_db_role(){
+ local db=$1 role=$2 ns=$3 password tmp_sql role_exists
+
+ role_exists=$(psql_admin postgres -Atc    "SELECT count(*) FROM pg_roles WHERE rolname='$role';")
+
+ if [[ "$role_exists" != 0 ]]; then
+   die "Role $role already exists. Validate credentials before continuing."
+ fi
+
+ password=$(app_password "$ns")
+ # Python reads password from environment through a protected temporary file, never in argv.
+ tmp_sql=$(mktemp); chmod 600 "$tmp_sql"
+ INJI_ROLE="$role" INJI_DATABASE="$db" INJI_DB_PASSWORD="$password" python3 - <<'PY' > "$tmp_sql"
+import os
+role=os.environ['INJI_ROLE']; db=os.environ['INJI_DATABASE']; password=os.environ['INJI_DB_PASSWORD']
+for v in (db,role):
+    assert v.isidentifier() and v.isascii(), 'invalid identifier'
+q=lambda s:"'"+s.replace("'","''")+"'"
+print("SELECT format('CREATE ROLE %I LOGIN PASSWORD %L', "+q(role)+", "+q(password)+") WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname="+q(role)+") \\gexec")
+print("SELECT format('CREATE DATABASE %I', "+q(db)+") WHERE NOT EXISTS (SELECT 1 FROM pg_database WHERE datname="+q(db)+") \\gexec")
+PY
+ unset password
+ psql_admin postgres < "$tmp_sql" >/dev/null
+ rm -f "$tmp_sql"
+}
+apply_db(){
+ assert_release_namespaces
+ [[ "${ALLOW_DB_INIT:-NO}" == YES ]] || die 'Set ALLOW_DB_INIT=YES after taking a DB backup and reviewing the SQL'
+ local db ns role src schema tables done_flag
+ start_pg
+ for db in "$CERTIFY_DATABASE" inji_mimoto inji_verify; do
+  if [[ "$db" == inji_certify && "$CERTIFY_USECASE" == core-default ]]; then
+    log "Preserving existing inji_certify database; skipping initialization"
+    continue
+  fi
+  case "$db" in
+    "$CERTIFY_DATABASE") ns="$NS_CERTIFY"; role=certifyuser; schema=certify; src="$ROOT/sources/inji-certify-0.14.0/db_scripts/inji_certify";;
+    inji_mimoto) ns="$NS_MIMOTO"; role=mimotouser; schema=mimoto; src="$ROOT/sources/mimoto-0.21.0/db_scripts/inji_mimoto";;
+    inji_verify) ns="$NS_VERIFY"; role=verifyuser; schema=verify; src="$ROOT/sources/inji-verify-0.18.0/db_scripts/inji_verify";;
+  esac
+  [[ -d "$src/ddl" && -f "$src/ddl.sql" && -f "$src/grants.sql" ]] || die "Missing pinned upstream SQL: $src"
+  if [[ "$db" != inji_verify ]]; then
+    [[ -f "$src/dml.sql" ]] || die "Missing DML script: $src/dml.sql"
+  fi
+  ensure_secret "$ns"
+  create_db_role "$db" "$role" "$ns"
+  # Schema must be absent or empty. Never drop or overwrite a populated schema.
+  tables=$(psql_admin "$db" -At <<SQL
+SELECT count(*) FROM information_schema.tables WHERE table_schema='$schema' AND table_type='BASE TABLE';
+SQL
+)
+  done_flag=$(psql_admin "$db" -At <<SQL
+SELECT CASE WHEN to_regclass('public.inji_deploy_migrations') IS NULL THEN 'no' ELSE 'table' END;
+SQL
+)
+  if [[ "$done_flag" == table ]]; then
+    complete=$(psql_admin "$db" -At <<SQL
+SELECT count(*) FROM public.inji_deploy_migrations WHERE module='$db' AND version='$(expected_db_version "$db")';
+SQL
+)
+    if [[ "$complete" == 1 ]]; then log "$db already marked as initialized; preserving"; continue; fi
+  fi
+  [[ "$tables" == 0 ]] || die "STOP: $db schema $schema has $tables tables but no verified init marker. Investigate manually; no SQL executed on schema."
+  # CREATE SCHEMA IF NOT EXISTS and establish the intended search_path for the upstream unqualified CREATE TABLE statements.
+  psql_admin "$db" <<SQL >/dev/null
+CREATE SCHEMA IF NOT EXISTS $schema;
+ALTER DATABASE $db SET search_path TO $schema,pg_catalog,public;
+SQL
+  kubectl exec -n "$PG_NAMESPACE" "$PG_POD" -c psql -- mkdir -p /work
+  if [[ "$db" == "$CERTIFY_DATABASE" && "$db" != inji_certify ]]; then
+    # v0.14.0 generic database bootstrap SQL uses inji_certify while plugin properties
+    # require a use-case-specific database; adjust only psql reconnect and grants.
+    staged=$(mktemp -d)
+    cp -a "$src/." "$staged/"
+    CERTIFY_DB_TARGET="$db" CERTIFY_DB_STAGE="$staged" python3 - <<'PY'
+import os
+from pathlib import Path
+root=Path(os.environ['CERTIFY_DB_STAGE']); target=os.environ['CERTIFY_DB_TARGET']
+assert target in ('inji_certify_mock','inji_certify_mosipid','inji_certify_insurance','inji_certify_landregistry')
+for name in ('ddl.sql','dml.sql','grants.sql'):
+ p=root/name
+ content=p.read_text()
+ content=content.replace('\\c inji_certify', '\\c '+target)
+ content=content.replace('DATABASE inji_certify', 'DATABASE '+target)
+ p.write_text(content)
+PY
+    kubectl cp "$staged/." "$PG_NAMESPACE/$PG_POD:/work/" -c psql >/dev/null
+    rm -rf "$staged"
+  else
+    kubectl cp "$src/." "$PG_NAMESPACE/$PG_POD:/work/" -c psql >/dev/null
+  fi
+  log "Initializing $db from official pinned SQL, fresh-only"
+  if [[ "$db" == inji_verify ]]; then
+    kubectl exec -n "$PG_NAMESPACE" "$PG_POD" -c psql -- \
+      sh -c 'cd /work && psql -X -v ON_ERROR_STOP=1 -q -d "$1" -f ddl.sql && psql -X -v ON_ERROR_STOP=1 -q -d "$1" -f grants.sql' sh "$db" >/dev/null
+  else
+    kubectl exec -n "$PG_NAMESPACE" "$PG_POD" -c psql -- \
+      sh -c 'cd /work && psql -X -v ON_ERROR_STOP=1 -q -d "$1" -f ddl.sql && psql -X -v ON_ERROR_STOP=1 -q -d "$1" -f dml.sql && psql -X -v ON_ERROR_STOP=1 -q -d "$1" -f grants.sql' sh "$db" >/dev/null
+  fi
+  psql_admin "$db" <<SQL >/dev/null
+CREATE TABLE IF NOT EXISTS public.inji_deploy_migrations(module text NOT NULL, version text NOT NULL, completed_at timestamptz DEFAULT now(), PRIMARY KEY(module,version));
+INSERT INTO public.inji_deploy_migrations(module,version) VALUES('$db','$(expected_db_version "$db")') ON CONFLICT DO NOTHING;
+SQL
+  log "Initialized $db and recorded release marker"
+ done
+ # Create Verify's upstream postgres-config when absent; never overwrite an existing config.
+ if ! kubectl get configmap postgres-config -n "$NS_VERIFY" >/dev/null 2>&1; then
+   kubectl -n "$NS_VERIFY" create configmap postgres-config \
+     --from-literal=database-host="$PG_HOST" \
+     --from-literal=database-port="$PG_PORT" \
+     --from-literal=database-username=verifyuser \
+     --from-literal=database-name=inji_verify \
+     --from-literal=database-schema=verify >/dev/null
+   log "Created ConfigMap $NS_VERIFY/postgres-config"
+ else
+   log "Preserving existing $NS_VERIFY/postgres-config; verify connection details"
+ fi
+ cleanup_pg
+}
+expected_db_version(){ case "$1" in "$CERTIFY_DATABASE") echo "v0.14.0-$CERTIFY_USECASE";; inji_mimoto) echo v0.21.0;; inji_verify) echo v0.18.0;; esac; }
+# Validate exact external requirements used by release charts; preserve existing configuration.
+
+# Copy required non-secret ConfigMaps into the Certify namespace.
+# Existing target ConfigMaps are preserved, not overwritten.
+sync_certify_configmaps(){
+  local name source target="$NS_CERTIFY"
+
+  for entry in \
+    "inji-stack-config:config-server" \
+    "config-server-share:config-server" \
+    "softhsm-certify-share:softhsm"
+  do
+    name="${entry%%:*}"
+    source="${entry##*:}"
+
+    if kubectl get configmap "$name" -n "$target" >/dev/null 2>&1; then
+      log "Preserving existing ConfigMap $target/$name"
+      continue
+    fi
+
+    kubectl get configmap "$name" -n "$source" -o json |
+      python3 -c '
+import json,sys
+cm=json.load(sys.stdin)
+for key in ("uid","resourceVersion","creationTimestamp","generation","managedFields"):
+    cm["metadata"].pop(key,None)
+cm["metadata"].pop("ownerReferences",None)
+cm["metadata"]["namespace"]=sys.argv[1]
+cm.pop("status",None)
+print(json.dumps(cm))
+' "$target" |
+      kubectl create -f -
+
+    log "Created ConfigMap $target/$name from $source/$name"
+  done
+}
+
+check_resources(){
+ local m=$1 ns; ns=$(module_ns "$m")
+ kubectl get ns "$ns" >/dev/null || die "Namespace $ns absent: configure namespace/resources first"
+ local cm
+ case "$m" in
+ inji-certify) for cm in inji-stack-config config-server-share softhsm-certify-share; do kubectl get cm "$cm" -n "$ns" >/dev/null || die "Missing ConfigMap $ns/$cm"; done
+    kubectl get secret "$APP_PASSWORD_SECRET" -n "$ns" >/dev/null || die "Missing $ns DB Secret";;
+ mimoto) for cm in inji-stack-config config-server-share artifactory-share; do kubectl get cm "$cm" -n "$ns" >/dev/null || die "Missing ConfigMap $ns/$cm"; done
+    kubectl get secret google-client -n "$ns" >/dev/null || die 'Missing Mimoto OAuth google-client secret (or override extraEnvVarsSecret)'
+    kubectl get pvc mimoto-keygen-keymanager -n "$ns" >/dev/null || die 'Missing Mimoto keygen keystore PVC (or override extraVolumes)' ;;
+ inji-verify-service) kubectl get cm inji-stack-config -n "$ns" >/dev/null || die "Missing inji-stack-config"
+    kubectl get cm postgres-config -n "$ns" >/dev/null || die "Missing postgres-config (verify service DB config)"
+    kubectl get secret db-common-secrets -n "$ns" >/dev/null || die 'Missing Verify DB secret';;
+ inji-verify-ui) kubectl get cm inji-stack-config -n "$ns" >/dev/null || die 'Missing inji-stack-config';;
+ injiweb) kubectl get cm inji-stack-config -n "$ns" >/dev/null || die 'Missing inji-stack-config';;
+ esac
+}
+render(){
+ prepare_charts
+ mkdir -p "$ROOT/reports/rendered"
+ for m in "${modules[@]}"; do
+  ns=$(module_ns "$m")
+  helm template "$m" "$(chart_for "$m")" -n "$ns" -f "$ROOT/overrides/$m.yaml" > "$ROOT/reports/rendered/$m.yaml"
+  log "Rendered $m"
+ done
+ log 'Rendered YAML available under reports/rendered; review before deployment.'
+}
+assert_release_namespaces(){
+ local releases_json
+ releases_json=$(helm list -A -o json)
+ printf '%s' "$releases_json" | python3 -c '
+import json,sys
+ns=dict(zip(sys.argv[1::2],sys.argv[2::2]))
+for item in json.load(sys.stdin):
+ n=item.get("name", ""); expected=ns.get(n)
+ if expected is not None and item.get("namespace") != expected:
+  sys.exit("Helm release "+n+" already exists in namespace "+str(item.get("namespace"))+" (expected "+expected+"). Refusing duplicate deployment.")
+' "inji-certify" "$NS_CERTIFY" "inji-verify-service" "$NS_VERIFY" "inji-verify-ui" "$NS_VERIFY" "mimoto" "$NS_MIMOTO" "datashare" "$NS_WEB" "injiweb" "$NS_WEB"
+}
+deploy(){
+ assert_release_namespaces
+ [[ "${ALLOW_HELM_UPGRADE:-NO}" == YES ]] || die 'Set ALLOW_HELM_UPGRADE=YES after reviewing --render output'
+ prepare_charts
+ for m in "${modules[@]}"; do
+  ns=$(module_ns "$m")
+  # No blind modifications of existing releases unless separately approved.
+  if helm status "$m" -n "$ns" >/dev/null 2>&1 && [[ "${ALLOW_EXISTING_UPGRADE:-NO}" != YES ]]; then
+   log "Preserving existing Helm release $ns/$m (ALLOW_EXISTING_UPGRADE not YES)"
+   continue
+  fi
+  if [[ "$m" == inji-certify ]]; then
+    # INJI_DEDICATED_CONFIG_STAGE
+    log "Deploying dedicated Inji Config Server"
+    APPLY=YES NS_CERTIFY="$NS_CERTIFY" \
+      "$ROOT/scripts/deploy-inji-config-server.sh"
+    log "Validating mock-identity configuration"
+    NS_CERTIFY="$NS_CERTIFY" \
+      "$ROOT/scripts/check-inji-config.sh"
+    sync_certify_configmaps
+  fi
+  check_resources "$m"
+  helmargs=()
+  if helm status "$m" -n "$ns" >/dev/null 2>&1; then
+    # An upgrade is not allowed to erase or blindly replace existing environment-specific values.
+    [[ "$(tr -d '[:space:]' < "$ROOT/overrides/$m.yaml" | sed '/^#/d')" != '{}' ]] || die "$m existing release upgrade requires a reviewed non-empty overrides/$m.yaml"
+    helmargs+=(--reuse-values)
+    if [[ "$m" == inji-certify && "${ALLOW_CERTIFY_VERSION_MIGRATION:-NO}" != YES ]]; then
+      die 'Existing Certify upgrade requires reviewed schema compatibility/upgrade scripts and ALLOW_CERTIFY_VERSION_MIGRATION=YES'
+    fi
+  fi
+  log "Installing/upgrading $ns/$m"
+  helm upgrade --install "$m" "$(chart_for "$m")" -n "$ns" -f "$ROOT/overrides/$m.yaml" "${helmargs[@]}" --atomic --wait --timeout "$TIMEOUT" --history-max 10
+ done
+ status
+}
+status(){
+ for m in "${modules[@]}"; do
+  ns=$(module_ns "$m")
+  if helm status "$m" -n "$ns" >/dev/null 2>&1; then
+   helm status "$m" -n "$ns" | grep -E '^(NAME|LAST DEPLOYED|NAMESPACE|STATUS|REVISION):' || true
+   kubectl get deploy -n "$ns" -l "app.kubernetes.io/instance=$m" || true
+  else log "Not installed: $ns/$m"; fi
+ done
+ log 'Application health, OIDC issuance, HSM signing, DataShare and VP verification need end-to-end integration tests.'
+}
+case "$MODE" in
+ --inventory) preflight; "$ROOT/tools/inventory.sh";;
+ --preflight) preflight;;
+ --fetch) fetch_sources;;
+ --database-plan) preflight; fetch_sources; log "Database plan: $CERTIFY_DATABASE/certify/certifyuser (usecase $CERTIFY_USECASE); inji_mimoto/mimoto/mimotouser; inji_verify/verify/verifyuser. Review upstream SQL; backup required.";;
+ --database-apply) preflight; fetch_sources; apply_db;;
+ --render) preflight; fetch_sources; select_deploy_modules; render;;
+ --deploy) preflight; fetch_sources; select_deploy_modules; deploy;;
+ --status) preflight; status;;
+ --validate) preflight; NS_CERTIFY="$NS_CERTIFY" NS_VERIFY="$NS_VERIFY" NS_MIMOTO="$NS_MIMOTO" NS_WEB="$NS_WEB" "$ROOT/tools/validate.sh";;
+ --all) preflight; fetch_sources; apply_db; render; deploy;;
+ --help|-h) cat <<'USAGE'
+Usage: ./deploy.sh [--inventory|--preflight|--fetch|--database-plan|--database-apply|--render|--deploy|--status|--all]
+Use config/inji.env. For database writes set ALLOW_DB_INIT=YES after a verified backup.
+For Helm writes set ALLOW_HELM_UPGRADE=YES; for upgrading existing releases additionally set ALLOW_EXISTING_UPGRADE=YES.
+DataShare requires DATA_SHARE_CHART pointing to the verified 1.3.0-beta.2 chart.
+USAGE
+ ;;
+ *) die "Unknown mode: $MODE";;
+esac
+

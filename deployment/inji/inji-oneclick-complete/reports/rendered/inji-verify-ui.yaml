@@ -1,0 +1,348 @@
+---
+# Source: inji-verify-ui/templates/service-account.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/name: inji-verify-ui
+    helm.sh/chart: inji-verify-ui-0.18.0
+    app.kubernetes.io/instance: inji-verify-ui
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: inji
+  name: inji-verify-ui
+  namespace: inji-verify
+---
+# Source: inji-verify-ui/templates/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: inji-verify-ui-config
+  namespace: inji-verify
+  labels:
+    app.kubernetes.io/name: inji-verify-ui
+    helm.sh/chart: inji-verify-ui-0.18.0
+    app.kubernetes.io/instance: inji-verify-ui
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: inji
+
+data:
+
+    config.json: "{\"VCRenderOrders\":{\"IncomeTaxAccountCredentialRenderOrder\":[\"fullName\",\"tan\",\"gender\",\"dateOfBirth\",\"issuedOn\",\"expiresOn\"],\"InsuranceCredentialRenderOrder\":[\"fullName\",\"policyNumber\",\"policyName\",\"policyIssuedOn\",\"policyExpiresOn\",\"benefits\",\"mobile\",\"email\",\"gender\",\"dob\"],\"MosipVerifiableCredentialRenderOrder\":[\"face\",\"fullName\",\"phone\",\"dateOfBirth\",\"gender\",\"email\",\"city\",\"UIN\",\"VID\",\"addressLine1\",\"province\",\"region\",\"postalCode\"],\"farmerCredentialRenderOrder\":[\"face\",\"authority\",\"idType\",\"fullName\",\"farmerId\",\"farmerID\",\"gender\",\"phoneNumber\",\"mobileNumber\",\"dateOfBirth\",\"primaryCommodity\",\"landOwnershipType\",\"ownershipType\",\"crops\",\"address\",\"villageOrTown\",\"village\",\"district\",\"state\",\"postalCode\",\"landArea\",\"totalLandArea\",\"primaryCropType\",\"secondaryCropType\",\"season\"],\"farmerLandCredentialRenderOrder\":[\"id\",\"farmerId\",\"dvcType\",{\"farmerLandDetails\":[\"farmId\",\"district\",\"surveyNumber\"]}]},\"WebWallets\":[{\"_note\":\"Replace walletBaseUrl with your own Inji Web Wallet URL. Accepts absolute URLs (https://wallet.example.org) or same-env relative paths (/wallet). Empty string disables the entry.\",\"iconUrl\":\"/assets/inji-web-wallet-icon.svg\",\"id\":\"inji-wallet\",\"name\":\"Inji Wallet\",\"walletBaseUrl\":null}],\"verifiableClaims\":[{\"clientIdScheme\":\"did\",\"definition\":{\"format\":{\"ldp_vc\":{\"proof_type\":[\"RsaSignature2018\",\"Ed25519Signature2020\"]}},\"input_descriptors\":[{\"constraints\":{\"fields\":[{\"filter\":{\"pattern\":\"MOSIPVerifiableCredential\",\"type\":\"object\"},\"path\":[\"$.type\"]}]},\"format\":{\"ldp_vc\":{\"proof_type\":[\"RsaSignature2018\",\"Ed25519Signature2020\"]}},\"id\":\"id card credential\"}],\"purpose\":\"Relying party is requesting your digital ID for the purpose of Self-Authentication\"},\"essential\":true,\"logo\":\"/assets/cert.png\",\"name\":\"MOSIP ID\",\"type\":\"MOSIPVerifiableCredential\"},{\"clientIdScheme\":\"did\",\"definition\":{\"format\":{\"ldp_vc\":{\"proof_type\":[\"Ed25519Signature2018\"]}},\"input_descriptors\":[{\"constraints\":{\"fields\":[{\"filter\":{\"pattern\":\"LifeInsuranceCredential\",\"type\":\"object\"},\"path\":[\"$.type\"]}]},\"format\":{\"ldp_vc\":{\"proof_type\":[\"Ed25519Signature2020\"]}},\"id\":\"id card credential\"}],\"purpose\":\"Relying party is requesting your digital ID for the purpose of Self-Authentication\"},\"logo\":\"/assets/cert.png\",\"name\":\"Life Insurance\",\"type\":\"LifeInsuranceCredential\"},{\"clientIdScheme\":\"pre_registered\",\"definition\":{\"format\":{\"ldp_vc\":{\"proof_type\":[\"Ed25519Signature2018\"]}},\"input_descriptors\":[{\"constraints\":{\"fields\":[{\"filter\":{\"pattern\":\"InsuranceCredential\",\"type\":\"object\"},\"path\":[\"$.type\"]}]},\"format\":{\"ldp_vc\":{\"proof_type\":[\"Ed25519Signature2020\"]}},\"id\":\"id card credential\"}],\"purpose\":\"Relying party is requesting your digital ID for the purpose of Self-Authentication\"},\"logo\":\"/assets/cert.png\",\"name\":\"Health Insurance\",\"type\":\"InsuranceCredential\"},{\"clientIdScheme\":\"did\",\"definition\":{\"format\":{\"vc+sd-jwt\":{\"sd-jwt_alg_values\":[\"EdDSA\"]}},\"input_descriptors\":[{\"constraints\":{\"fields\":[{\"filter\":{\"pattern\":\"SD_JWT\",\"type\":\"string\"},\"path\":[\"$.vct\"]}]},\"format\":{\"vc+sd-jwt\":{\"sd-jwt_alg_values\":[\"EdDSA\"]}},\"id\":\"Mock Identity card credential\"}],\"purpose\":\"Relying party is requesting your digital ID for the purpose of Self-Authentication\"},\"logo\":\"/assets/cert.png\",\"name\":\"Mock Identity (SD JWT)\",\"type\":\"SD_JWT\"},{\"clientIdScheme\":\"did\",\"definition\":{\"format\":{\"ldp_vc\":{\"proof_type\":[\"Ed25519Signature2020\"]}},\"input_descriptors\":[{\"constraints\":{\"fields\":[{\"filter\":{\"pattern\":\"LandStatementCredential\",\"type\":\"object\"},\"path\":[\"$.type\"]}]},\"format\":{\"ldp_vc\":{\"proof_type\":[\"Ed25519Signature2020\"]}},\"id\":\"id card credential\"}],\"purpose\":\"Relying party is requesting your digital ID for the purpose of Self-Authentication\"},\"logo\":\"/assets/cert.png\",\"name\":\"Land Registry\",\"type\":\"LandStatementCredential\"}]}"
+---
+# Source: inji-verify-ui/templates/nginx-configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: inji-verify-ui-nginx-cm
+  namespace: inji-verify
+  labels:
+    app.kubernetes.io/name: inji-verify-ui
+    helm.sh/chart: inji-verify-ui-0.18.0
+    app.kubernetes.io/instance: inji-verify-ui
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: inji
+data:
+  nginx.conf: |-
+    worker_processes  1;
+    
+    events {
+      worker_connections  1024;
+    }
+    
+    http {
+      access_log /var/log/nginx/access1.log;
+      error_log /var/log/nginx/error1.log;
+      client_max_body_size 10M;
+      server {
+        listen 8000;
+        server_name  localhost;
+
+        root   /usr/share/nginx/html;
+        index  index.html index.htm;
+        include /etc/nginx/mime.types;
+
+        gzip on;
+        gzip_min_length 1000;
+        gzip_proxied expired no-cache no-store private auth;
+        gzip_types text/plain text/css application/json application/javascript application/x-javascript text/xml application/xml application/xml+rss text/javascript;
+
+        location /v1/verify {
+          proxy_pass         http://inji-verify-service.injiverify/v1/verify;
+          proxy_redirect     off;
+          proxy_set_header   Host $host;
+          proxy_set_header   X-Real-IP $remote_addr;
+          proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header   X-Forwarded-Host $server_name;
+        }
+        location /.well-known/did.json {
+          proxy_pass http://inji-verify-service.injiverify/v1/verify/.well-known/did.json;
+          proxy_redirect     off;
+          proxy_set_header   Host $host;
+          proxy_set_header   X-Real-IP $remote_addr;
+          proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header   X-Forwarded-Host $server_name;
+          proxy_set_header   Connection close;
+        }
+  
+        location / {
+          try_files $uri $uri/ /index.html;
+        }
+      }
+    }
+---
+# Source: inji-verify-ui/templates/clusterrole.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: inji-verify-ui
+  namespace: "inji-verify"
+  labels:
+    app.kubernetes.io/name: inji-verify-ui
+    helm.sh/chart: inji-verify-ui-0.18.0
+    app.kubernetes.io/instance: inji-verify-ui
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: inji
+rules:
+  - apiGroups:
+      - "*"
+    resources:
+      - endpoints
+      - pods
+      - services
+      - configmaps
+      - secrets
+      - virtualservices
+      - gateways
+    verbs:
+      - get
+      - list
+      - create
+      - update
+      - patch
+---
+# Source: inji-verify-ui/templates/clusterrolebinding.yaml
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  labels:
+    app.kubernetes.io/name: inji-verify-ui
+    helm.sh/chart: inji-verify-ui-0.18.0
+    app.kubernetes.io/instance: inji-verify-ui
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: inji
+  name: inji-verify-ui
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: inji-verify-ui
+subjects:
+  - kind: ServiceAccount
+    name: inji-verify-ui
+    namespace: inji-verify
+---
+# Source: inji-verify-ui/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/name: inji-verify-ui
+    helm.sh/chart: inji-verify-ui-0.18.0
+    app.kubernetes.io/instance: inji-verify-ui
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: inji
+  name: inji-verify-ui
+spec:
+  type: ClusterIP
+  
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP 
+      targetPort: 8000
+  selector:
+    app.kubernetes.io/name: inji-verify-ui
+    app.kubernetes.io/instance: inji-verify-ui
+---
+# Source: inji-verify-ui/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/name: inji-verify-ui
+    helm.sh/chart: inji-verify-ui-0.18.0
+    app.kubernetes.io/instance: inji-verify-ui
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: inji
+  name: inji-verify-ui
+  annotations:
+    checksum/config: 07df979a8905e12ec46a684314efd0a9562524d55e4c823aaf1a004f5e0af2fe
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: inji-verify-ui
+      app.kubernetes.io/instance: inji-verify-ui
+  template:
+    metadata:
+      annotations:
+      labels:
+        app.kubernetes.io/name: inji-verify-ui
+        helm.sh/chart: inji-verify-ui-0.18.0
+        app.kubernetes.io/instance: inji-verify-ui
+        app.kubernetes.io/managed-by: Helm
+    spec:
+      serviceAccountName: inji-verify-ui
+      
+      affinity:
+        podAffinity:
+          
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: inji-verify-ui
+                    app.kubernetes.io/instance: inji-verify-ui
+                namespaces:
+                  - "inji-verify"
+                topologyKey: kubernetes.io/hostname
+              weight: 1
+        nodeAffinity:
+          
+      initContainers:
+      containers:
+        - name: inji-verify-ui
+          image: docker.io/injistack/inji-verify-ui:0.18.0
+          imagePullPolicy: Always
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsUser: 0
+          env:
+            - name: container_user
+              value: inji
+            - name: JDK_JAVA_OPTIONS
+              value: -Xms750M -Xmx750M
+            - name: CLIENT_ID
+              value: "injiverify.sandbox.xyz.net/"
+            - name: CLIENT_ID_DID
+              value: "did:web:injiverify.sandbox.xyz.net:v1:verify"
+          envFrom:
+            - configMapRef:
+                name: inji-stack-config
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+            - name: inji-verify-ui-config
+              mountPath: /usr/share/nginx/html/assets/config.json
+              subPath: config.json
+              readOnly: true
+          ports:
+            - name: spring-service
+              containerPort: 8000
+          resources:
+            limits:
+              cpu: 300m
+              memory: 1500Mi
+            requests:
+              cpu: 100m
+              memory: 50Mi
+          startupProbe:
+            failureThreshold: 30
+            httpGet:
+              path: /
+              port: 8000
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          livenessProbe:
+            failureThreshold: 6
+            httpGet:
+              path: /
+              port: 8000
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          readinessProbe:
+            failureThreshold: 6
+            httpGet:
+              path: /
+              port: 8000
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: inji-verify-ui-nginx-cm
+            items:
+              - key: nginx.conf
+                path: nginx.conf
+                
+        - name: inji-verify-ui-config
+          configMap:
+            name: inji-verify-ui-config
+            items:
+              - key: config.json
+                path: config.json
+---
+# Source: inji-verify-ui/templates/gateway.yaml
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name:  inji-verify-ui-gateway
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+      - injiverify.sandbox.xyz.net
+---
+# Source: inji-verify-ui/templates/virtualservice.yaml
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: inji-verify-ui
+  namespace: inji-verify
+  labels:
+    app.kubernetes.io/name: inji-verify-ui
+    helm.sh/chart: inji-verify-ui-0.18.0
+    app.kubernetes.io/instance: inji-verify-ui
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: inji
+spec:
+  hosts:
+  - "*"
+  gateways:
+    
+    - inji-verify-ui-gateway
+    
+  http:
+  - match:
+      - uri:
+          prefix: /
+    route:
+    - destination:
+        host: inji-verify-ui
+        port:
+          number: 80
+    headers:
+      request:
+        set:
+          x-forwarded-proto: https
+      response:
+        set:
+          Cache-control: no-store
+          Pragma: no-cache
+          Strict-Transport-Security: max-age=31536000; includeSubDomains
+          X-Frame-Options: SAMEORIGIN
+          X-Content-Type-Options: nosniff

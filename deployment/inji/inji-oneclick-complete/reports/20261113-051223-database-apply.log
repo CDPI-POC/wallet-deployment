@@ -1,0 +1,13 @@
+[2026-11-13T05:12:24+05:30] Cluster, node, PostgreSQL secret references: OK
+[2026-11-13T05:12:24+05:30] Existing dependency namespace: config-server
+[2026-11-13T05:12:24+05:30] Existing dependency namespace: redis
+[2026-11-13T05:12:24+05:30] Existing dependency namespace: esignet
+[2026-11-13T05:12:24+05:30] No release was modified by preflight.
+Already present: /home/mosipuser/inji-oneclick-complete/sources/inji-certify-0.14.0
+Already present: /home/mosipuser/inji-oneclick-complete/sources/inji-verify-0.18.0
+Already present: /home/mosipuser/inji-oneclick-complete/sources/mimoto-0.21.0
+Already present: /home/mosipuser/inji-oneclick-complete/sources/inji-web-0.16.0
+Pinned Inji source repositories fetched successfully.
+[2026-11-13T05:12:31+05:30] Initializing inji_certify from official pinned SQL, fresh-only
+[2026-11-13T05:12:32+05:30] Initialized inji_certify and recorded release marker
+[2026-11-13T05:12:33+05:30] ERROR: Create mimoto/inji-db-credentials, or set AUTO_CREATE_APP_SECRET=YES

@@ -1,0 +1,108 @@
+{
+  "apiVersion": "v1",
+  "kind": "ConfigMap",
+  "metadata": {
+    "name": "inji-config-server-env",
+    "namespace": "inji-certify"
+  },
+  "data": {
+    "SPRING_CLOUD_CONFIG_SERVER_GIT_URI": "https://github.com/sjkarthik/inji-config.git",
+    "SPRING_CLOUD_CONFIG_SERVER_GIT_DEFAULT_LABEL": "Injitest_autodeploy",
+    "SPRING_CLOUD_CONFIG_SERVER_GIT_SEARCHPATHS": "",
+    "SPRING_CLOUD_CONFIG_SERVER_GIT_CLONE_ON_START": "true",
+    "SPRING_CLOUD_CONFIG_SERVER_GIT_USERNAME": "",
+    "SERVER_PORT": "51000"
+  }
+}
+---
+{
+  "apiVersion": "apps/v1",
+  "kind": "Deployment",
+  "metadata": {
+    "name": "inji-config-server",
+    "namespace": "inji-certify"
+  },
+  "spec": {
+    "replicas": 1,
+    "selector": {
+      "matchLabels": {
+        "app": "inji-config-server"
+      }
+    },
+    "template": {
+      "metadata": {
+        "labels": {
+          "app": "inji-config-server"
+        }
+      },
+      "spec": {
+        "containers": [
+          {
+            "name": "config-server",
+            "image": "mosipid/config-server:1.1.2",
+            "imagePullPolicy": "IfNotPresent",
+            "ports": [
+              {
+                "name": "http",
+                "containerPort": 51000
+              }
+            ],
+            "envFrom": [
+              {
+                "configMapRef": {
+                  "name": "inji-config-server-env"
+                }
+              }
+            ],
+            "readinessProbe": {
+              "tcpSocket": {
+                "port": 51000
+              },
+              "initialDelaySeconds": 15,
+              "periodSeconds": 10
+            },
+            "startupProbe": {
+              "tcpSocket": {
+                "port": 51000
+              },
+              "failureThreshold": 36,
+              "periodSeconds": 10
+            },
+            "resources": {
+              "requests": {
+                "cpu": "50m",
+                "memory": "384Mi"
+              },
+              "limits": {
+                "cpu": "500m",
+                "memory": "1500Mi"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}
+---
+{
+  "apiVersion": "v1",
+  "kind": "Service",
+  "metadata": {
+    "name": "inji-config-server",
+    "namespace": "inji-certify"
+  },
+  "spec": {
+    "selector": {
+      "app": "inji-config-server"
+    },
+    "ports": [
+      {
+        "name": "http",
+        "port": 80,
+        "targetPort": 51000
+      }
+    ],
+    "type": "ClusterIP"
+  }
+}

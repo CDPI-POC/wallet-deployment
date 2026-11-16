@@ -1,0 +1,18 @@
+apiVersion: v1
+data:
+  active_profile_env: default
+  cache_config_url_env: http://config-server.config-server/config/*/default/v1.2.0.1/hazelcast_cache.xml
+  consolidator_config_file_url_env: http://config-server.config-server/config/*/default/v1.2.0.1/websub-consolidator.toml
+  hub_config_file_url_env: http://config-server.config-server/config/*/default/v1.2.0.1/websub-service.toml
+  spring_config_label_env: v1.2.0.1
+  spring_config_url_env: http://config-server.config-server/config
+kind: ConfigMap
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"v1","data":{"active_profile_env":"default","cache_config_url_env":"http://config-server.config-server/config/*/default/v1.2.0.1/hazelcast_cache.xml","consolidator_config_file_url_env":"http://config-server.config-server/config/*/default/v1.2.0.1/websub-consolidator.toml","hub_config_file_url_env":"http://config-server.config-server/config/*/default/v1.2.0.1/websub-service.toml","spring_config_label_env":"v1.2.0.1","spring_config_url_env":"http://config-server.config-server/config"},"kind":"ConfigMap","metadata":{"annotations":{},"name":"config-server-share","namespace":"esignet"}}
+  creationTimestamp: "2026-11-10T13:26:24Z"
+  name: config-server-share
+  namespace: esignet
+  resourceVersion: "556953"
+  uid: f6a51b2b-2b70-43af-935f-1ad2320ff96f

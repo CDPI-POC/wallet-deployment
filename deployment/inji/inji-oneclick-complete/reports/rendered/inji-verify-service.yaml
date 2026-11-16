@@ -1,0 +1,249 @@
+---
+# Source: inji-verify-service/templates/service-account.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/name: inji-verify-service
+    helm.sh/chart: inji-verify-service-0.18.0
+    app.kubernetes.io/instance: inji-verify-service
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: inji
+  name: inji-verify-service
+  namespace: inji-verify
+---
+# Source: inji-verify-service/templates/clusterrolebinding.yaml
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  labels:
+    app.kubernetes.io/name: inji-verify-service
+    helm.sh/chart: inji-verify-service-0.18.0
+    app.kubernetes.io/instance: inji-verify-service
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: inji
+  name: inji-verify-service
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: inji-verify-service
+subjects:
+  - kind: ServiceAccount
+    name: inji-verify-service
+    namespace: inji-verify
+---
+# Source: inji-verify-service/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/name: inji-verify-service
+    helm.sh/chart: inji-verify-service-0.18.0
+    app.kubernetes.io/instance: inji-verify-service
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: inji
+  name: inji-verify-service
+  annotations:
+spec:
+  type: ClusterIP
+  
+  ports:
+    - port: 80
+      protocol: TCP 
+      targetPort: 8080
+  selector:
+    app.kubernetes.io/name: inji-verify-service
+    app.kubernetes.io/instance: inji-verify-service
+---
+# Source: inji-verify-service/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/name: inji-verify-service
+    helm.sh/chart: inji-verify-service-0.18.0
+    app.kubernetes.io/instance: inji-verify-service
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: inji
+  name: inji-verify-service
+  annotations:
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: inji-verify-service
+      app.kubernetes.io/instance: inji-verify-service
+  template:
+    metadata:
+      annotations:
+        
+        prometheus.io/scrape: "true"
+      labels:
+        app.kubernetes.io/name: inji-verify-service
+        helm.sh/chart: inji-verify-service-0.18.0
+        app.kubernetes.io/instance: inji-verify-service
+        app.kubernetes.io/managed-by: Helm
+    spec:
+      serviceAccountName: inji-verify-service
+      
+      affinity:
+        podAffinity:
+          
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: inji-verify-service
+                    app.kubernetes.io/instance: inji-verify-service
+                namespaces:
+                  - "inji-verify"
+                topologyKey: kubernetes.io/hostname
+              weight: 1
+        nodeAffinity:
+          
+      initContainers:
+      containers:
+        - name: inji-verify-service
+          image: docker.io/injistack/inji-verify-service:0.18.0
+          imagePullPolicy: Always
+          env:
+            - name: container_user
+              value: "1001"
+            - name: JDK_JAVA_OPTIONS
+              value: "-Xms1500M -Xmx1500M"
+            - name: DATABASE_HOST
+              valueFrom:
+                configMapKeyRef:
+                  key: database-host
+                  name: postgres-config
+            - name: DATABASE_PORT
+              valueFrom:
+                configMapKeyRef:
+                  key: database-port
+                  name: postgres-config
+            - name: DATABASE_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  key: database-username
+                  name: postgres-config
+            - name: DATABASE_NAME
+              valueFrom:
+                configMapKeyRef:
+                  key: database-name
+                  name: postgres-config
+            - name: DATABASE_SCHEMA
+              valueFrom:
+                configMapKeyRef:
+                  key: database-schema
+                  name: postgres-config
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: password
+                  name: inji-db-credentials
+          envFrom:
+            - configMapRef:
+                name: inji-stack-config
+          ports:
+            - name: spring-service
+              containerPort: 8080
+          resources:
+            limits:
+              cpu: 500m
+              memory: 2250Mi
+            requests:
+              cpu: 100m
+              memory: 1500Mi
+          startupProbe:
+            failureThreshold: 30
+            httpGet:
+              path: /v1/verify/actuator/health
+              port: 8080
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          livenessProbe:
+            failureThreshold: 6
+            httpGet:
+              path: /v1/verify/actuator/health
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          readinessProbe:
+            failureThreshold: 6
+            httpGet:
+              path: /v1/verify/actuator/health
+              port: 8080
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+---
+# Source: inji-verify-service/templates/servicemonitor.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: inji-verify-service
+  namespace: "inji-verify"
+  labels:
+    app.kubernetes.io/name: inji-verify-service
+    helm.sh/chart: inji-verify-service-0.18.0
+    app.kubernetes.io/instance: inji-verify-service
+    app.kubernetes.io/managed-by: Helm
+spec:
+  endpoints:
+    - targetPort: 8080
+      path: /v1/verify/actuator/prometheus
+      interval: 10s
+  namespaceSelector:
+    matchNames:
+      - "inji-verify"
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: inji-verify-service
+      app.kubernetes.io/instance: inji-verify-service
+---
+# Source: inji-verify-service/templates/virtualservice.yaml
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: inji-verify-service
+  namespace: inji-verify
+  labels:
+    app.kubernetes.io/name: inji-verify-service
+    helm.sh/chart: inji-verify-service-0.18.0
+    app.kubernetes.io/instance: inji-verify-service
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: inji
+spec:
+  hosts:
+  - "*"
+  gateways:
+    - istio-system/internal
+  http:
+  - match:
+      - uri:
+          prefix: /v1/verify
+    route:
+    - destination:
+        host: inji-verify-service
+        port:
+          number: 80
+    corsPolicy:
+      null
+    headers:
+      request:
+        set:
+          x-forwarded-proto: https
+      response:
+        set:
+          Cache-control: no-store
+          Pragma: no-cache
+          Strict-Transport-Security: max-age=31536000; includeSubDomains
+          X-Frame-Options: SAMEORIGIN

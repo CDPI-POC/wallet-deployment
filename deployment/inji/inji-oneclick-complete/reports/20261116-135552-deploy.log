@@ -1,0 +1,19 @@
+[2026-11-16T13:55:52+05:30] Cluster, node, PostgreSQL secret references: OK
+[2026-11-16T13:55:53+05:30] Existing dependency namespace: config-server
+[2026-11-16T13:55:53+05:30] Existing dependency namespace: redis
+[2026-11-16T13:55:53+05:30] Existing dependency namespace: esignet
+[2026-11-16T13:55:53+05:30] No release was modified by preflight.
+Already present: /home/mosipuser/inji-oneclick-complete/sources/inji-certify-0.14.0
+Already present: /home/mosipuser/inji-oneclick-complete/sources/inji-verify-0.18.0
+Already present: /home/mosipuser/inji-oneclick-complete/sources/mimoto-0.21.0
+Already present: /home/mosipuser/inji-oneclick-complete/sources/inji-web-0.16.0
+Pinned Inji source repositories fetched successfully.
+[2026-11-16T13:55:53+05:30] Selected deployment modules: injiweb
+[2026-11-16T13:56:06+05:30] Pinned chart verified: injiweb (0.16.0)
+[2026-11-16T13:56:07+05:30] Installing/upgrading injiweb/injiweb
+Release "injiweb" does not exist. Installing it now.
+Error: release injiweb failed, and has been uninstalled due to atomic being set: 1 error occurred:
+	* Deployment in version "v1" cannot be handled as a Deployment: json: cannot unmarshal number into Go struct field EnvVar.spec.template.spec.containers.env.value of type string
+
+
+[2026-11-16T13:56:08+05:30] FAILED at line 469. Existing K8s releases and databases were not deleted.

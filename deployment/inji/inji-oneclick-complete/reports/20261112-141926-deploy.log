@@ -1,0 +1,17 @@
+[2026-11-12T14:19:26+05:30] Cluster, node, PostgreSQL secret references: OK
+[2026-11-12T14:19:26+05:30] Existing dependency namespace: config-server
+[2026-11-12T14:19:27+05:30] Existing dependency namespace: redis
+[2026-11-12T14:19:27+05:30] Existing dependency namespace: esignet
+[2026-11-12T14:19:27+05:30] No release was modified by preflight.
+Already present: /home/mosipuser/inji-oneclick-complete/sources/inji-certify-0.14.0
+Already present: /home/mosipuser/inji-oneclick-complete/sources/inji-verify-0.18.0
+Already present: /home/mosipuser/inji-oneclick-complete/sources/mimoto-0.21.0
+Already present: /home/mosipuser/inji-oneclick-complete/sources/inji-web-0.16.0
+Pinned Inji source repositories fetched successfully.
+[2026-11-12T14:19:27+05:30] Selected deployment modules: inji-certify
+[2026-11-12T14:19:46+05:30] Pinned chart verified: inji-certify (0.14.0)
+[2026-11-12T14:19:46+05:30] Preserving existing ConfigMap inji-certify/inji-stack-config
+[2026-11-12T14:19:46+05:30] Preserving existing ConfigMap inji-certify/config-server-share
+[2026-11-12T14:19:46+05:30] Preserving existing ConfigMap inji-certify/softhsm-certify-share
+[2026-11-12T14:19:47+05:30] Installing/upgrading inji-certify/inji-certify
+Release "inji-certify" does not exist. Installing it now.

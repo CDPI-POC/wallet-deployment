@@ -1,0 +1,337 @@
+---
+# Source: injiweb/templates/service-account.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/name: injiweb
+    helm.sh/chart: injiweb-0.16.0
+    app.kubernetes.io/instance: injiweb
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: inji
+  name: injiweb
+  namespace: injiweb
+---
+# Source: injiweb/templates/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: injiweb-nginx-cm
+  namespace: injiweb
+  labels:
+    app.kubernetes.io/name: injiweb
+    helm.sh/chart: injiweb-0.16.0
+    app.kubernetes.io/instance: injiweb
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: inji
+data:
+  nginx.conf: |-
+    worker_processes  1;
+    
+    events {
+      worker_connections  1024;
+    }
+    
+    http {
+      access_log /var/log/nginx/access1.log;
+      error_log /var/log/nginx/error1.log;
+
+      large_client_header_buffers 4 32k;
+      proxy_buffer_size   128k;
+      proxy_buffers   4 256k;
+      proxy_busy_buffers_size   256k;
+      proxy_headers_hash_bucket_size 128;
+      proxy_headers_hash_max_size 512;
+    
+      server {
+        listen 3004;
+        server_name  localhost;
+
+        root   /usr/share/nginx/html;
+        index  index.html index.htm;
+        include /etc/nginx/mime.types;
+
+        gzip on;
+        gzip_min_length 1000;
+        gzip_proxied expired no-cache no-store private auth;
+        gzip_types text/plain text/css application/json application/javascript application/x-javascript text/xml application/xml application/xml+rss text/javascript;
+
+        location /v1/mimoto {
+          proxy_pass         http://mimoto.injiweb/v1/mimoto;
+          proxy_redirect     off;
+          proxy_set_header   Host $host;
+          proxy_set_header   X-Real-IP $remote_addr;
+          proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+          proxy_set_header   X-Forwarded-Host $server_name;
+        }
+  
+        location / {
+          try_files $uri $uri/ /index.html;
+        }
+      }
+    }
+---
+# Source: injiweb/templates/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: injiweb-ui
+  namespace: injiweb
+  labels:
+        app.kubernetes.io/name: injiweb
+        helm.sh/chart: injiweb-0.16.0
+        app.kubernetes.io/instance: injiweb
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/component: inji
+data:
+    DEFAULT_FEVICON: "favicon.ico"
+    DEFAULT_LANG: "en"
+    DEFAULT_THEME: ""
+    DEFAULT_TITLE: "Inji Wallet"
+    MIMOTO_URL: "https://injiweb.sandbox.xyz.net/v1/mimoto"
+---
+# Source: injiweb/templates/clusterrole.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: injiweb
+  namespace: "injiweb"
+  labels:
+    app.kubernetes.io/name: injiweb
+    helm.sh/chart: injiweb-0.16.0
+    app.kubernetes.io/instance: injiweb
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: inji
+rules:
+  - apiGroups:
+      - "*"
+    resources:
+      - endpoints
+      - pods
+      - services
+      - configmaps
+      - secrets
+      - virtualservices
+      - gateways
+    verbs:
+      - get
+      - list
+      - create
+      - update
+      - patch
+---
+# Source: injiweb/templates/clusterrolebinding.yaml
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  labels:
+    app.kubernetes.io/name: injiweb
+    helm.sh/chart: injiweb-0.16.0
+    app.kubernetes.io/instance: injiweb
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: inji
+  name: injiweb
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: injiweb
+subjects:
+  - kind: ServiceAccount
+    name: injiweb
+    namespace: injiweb
+---
+# Source: injiweb/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/name: injiweb
+    helm.sh/chart: injiweb-0.16.0
+    app.kubernetes.io/instance: injiweb
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: inji
+  name: injiweb
+spec:
+  type: ClusterIP
+  
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP 
+      targetPort: 3004
+  selector:
+    app.kubernetes.io/name: injiweb
+    app.kubernetes.io/instance: injiweb
+---
+# Source: injiweb/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/name: injiweb
+    helm.sh/chart: injiweb-0.16.0
+    app.kubernetes.io/instance: injiweb
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: inji
+  name: injiweb
+  annotations:
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: injiweb
+      app.kubernetes.io/instance: injiweb
+  template:
+    metadata:
+      annotations:
+      labels:
+        app.kubernetes.io/name: injiweb
+        helm.sh/chart: injiweb-0.16.0
+        app.kubernetes.io/instance: injiweb
+        app.kubernetes.io/managed-by: Helm
+    spec:
+      serviceAccountName: injiweb
+      
+      affinity:
+        podAffinity:
+          
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: injiweb
+                    app.kubernetes.io/instance: injiweb
+                namespaces:
+                  - "injiweb"
+                topologyKey: kubernetes.io/hostname
+              weight: 1
+        nodeAffinity:
+          
+      initContainers:
+      containers:
+        - name: inji-web
+          image: docker.io/injistack/inji-web:0.16.0
+          imagePullPolicy: Always
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsUser: 0
+          env:
+            - name: container_user
+              value: 1001
+            - name: JDK_JAVA_OPTIONS
+              value: -Xms750M -Xmx750M
+          envFrom:
+            - configMapRef:
+                name: inji-stack-config
+            - configMapRef:
+                name: injiweb-ui
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+            - mountPath: /var/log/nginx
+              name: nginx-logs
+          ports:
+            - name: spring-service
+              containerPort: 3004
+          resources:
+            limits:
+              cpu: 300m
+              memory: 1500Mi
+            requests:
+              cpu: 100m
+              memory: 50Mi
+          startupProbe:
+            failureThreshold: 30
+            httpGet:
+              path: /
+              port: 3004
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          livenessProbe:
+            failureThreshold: 6
+            httpGet:
+              path: /
+              port: 3004
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          readinessProbe:
+            failureThreshold: 6
+            httpGet:
+              path: /
+              port: 3004
+            initialDelaySeconds: 0
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+      volumes:
+        - name: nginx-logs
+          emptyDir: {}
+        - name: nginx-config
+          configMap:
+            name: injiweb-nginx-cm
+            items:
+              - key: nginx.conf
+                path: nginx.conf
+---
+# Source: injiweb/templates/gateway.yaml
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name:  inji-web-gateway
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+      - injiweb.sandbox.xyz.net
+---
+# Source: injiweb/templates/virtualservice.yaml
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: injiweb
+  namespace: injiweb
+  labels:
+    app.kubernetes.io/name: injiweb
+    helm.sh/chart: injiweb-0.16.0
+    app.kubernetes.io/instance: injiweb
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: inji
+spec:
+  hosts:
+  - "*"
+  gateways:
+    
+    - inji-web-gateway
+    
+  http:
+  - match:
+      - uri:
+          prefix: /
+    route:
+    - destination:
+        host: injiweb
+        port:
+          number: 80
+    headers:
+      request:
+        set:
+          x-forwarded-proto: https
+      response:
+        set:
+          Cache-control: no-store
+          Pragma: no-cache
+          Strict-Transport-Security: max-age=31536000; includeSubDomains
+          X-Frame-Options: SAMEORIGIN
